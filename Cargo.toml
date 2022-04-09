@@ -7,4 +7,4 @@ edition = "2021"
 
 [dependencies]
 regex = "1"
-rocket = "0.4.10"
+rocket = { version = "0.5.0-rc.1", features = ["json"] }

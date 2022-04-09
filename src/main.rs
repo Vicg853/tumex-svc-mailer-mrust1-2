@@ -1,12 +1,9 @@
-#![feature(proc_macro_hygiene, decl_macro)]
-
-mod routes;
-use rocket::ignite;
-
 #[macro_use] extern crate rocket;
 
+mod app_routes;
 
-
-fn main() {
-    ignite().mount("/api/mailer", rocket::routes![routes::send_message]).launch();
+#[launch]
+fn rocket() -> _ {
+    rocket::build()
+        .mount("/api/mailer", routes![app_routes::send_message])
 }
