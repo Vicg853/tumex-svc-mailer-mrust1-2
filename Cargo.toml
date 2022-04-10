@@ -1,5 +1,5 @@
 [package]
-name = "rust-api"
+name = "rust-mailer-api"
 version = "0.1.0"
 edition = "2021"
 
