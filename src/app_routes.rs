@@ -11,6 +11,9 @@ pub struct MailMessage {
    pub message: String
 }
 
+//TODO Add somtehing similar to sanitize-html to prevent xss and other attacks
+//TODO Find a way to prevent sql injection scripts too
+
 #[post("/send", data = "<form>")]
 pub fn send_message(form: Form<MailMessage>) -> status::Accepted<String> {
    let message = form.into_inner();
