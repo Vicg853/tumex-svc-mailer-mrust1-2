@@ -2,12 +2,14 @@
 name = "rust-mailer-api"
 version = "0.1.0"
 edition = "2021"
+publish = false
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+serde = { version = "1.0.137", features = ["derive"] }
 regex = "1"
-rocket = { version = "0.5.0-rc.1", features = ["json"] }
+rocket = { version = "0.5.0-rc.1", features = ["json", "msgpack"] }
 
 [profile.release]
 strip = true
