@@ -1,0 +1,5 @@
+rd_enabled = true
+fleet_id = "8b79b142-3e1c-4b55-8199-8597adc5c481"
+
+[build]
+sccache = "/home/vicg853/.cargo/bin/sccache"
