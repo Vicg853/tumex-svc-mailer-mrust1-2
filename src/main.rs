@@ -5,5 +5,5 @@ mod app_routes;
 #[launch]
 fn rocket() -> _ {
     rocket::build()
-        .mount("/api/mailer", routes![app_routes::send_message])
+        .mount("/", routes![app_routes::send_message])
 }
