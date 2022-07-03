@@ -39,7 +39,7 @@ impl<'c> Message {
 //TODO + other sec shit
 
 #[post("/send", format = "application/json", data = "<message>")]
-pub fn send_message(message: Json<Message>) -> status::Custom<content::Json<String>> {
+pub async fn send_message(message: Json<Message>) -> status::Custom<content::Json<String>> {
     let message = message.into_inner();
     let validated = message.is_valid();
     
