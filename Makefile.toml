@@ -1,0 +1,10 @@
+[tasks.build]
+description = "Production ready build"
+script = "fleet build --profile prod --out-dir ./build"
+
+[tasks.dev]
+description = "Run the development command"
+script = "fleet run"
+env_files = [
+   { path = ".env", profile = "development" }
+]
