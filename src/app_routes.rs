@@ -39,7 +39,7 @@ impl<'c> Message {
 //TODO + other sec shit
 
 #[post("/send", format = "application/json", data = "<message>")]
-pub async fn send_message(message: Json<Message>) -> status::Custom<content::Json<String>> {
+pub async fn send_message(message: Json<Message>) -> status::Custom<content::RawJson<String>> {
     let message = message.into_inner();
     let validated = message.is_valid();
     
@@ -51,10 +51,10 @@ pub async fn send_message(message: Json<Message>) -> status::Custom<content::Jso
 
             status::Custom(
             HttpStatus::new(e.code), 
-            content::Json(json_response.to_string()))
+            content::RawJson(json_response.to_string()))
         },
         Ok(_) => status::Custom(
             HttpStatus::new(200), 
-            content::Json("Message sent".to_string()))
+            content::RawJson("Message sent".to_string()))
     }
 }
