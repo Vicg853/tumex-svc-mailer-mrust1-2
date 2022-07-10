@@ -1370,28 +1370,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rocket_db_pools"
-version = "0.1.0-rc.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8bc154f4f4985a136e2d59c336474a56da02103993f5e637e3a5424971ee4eff"
-dependencies = [
- "mongodb",
- "rocket",
- "rocket_db_pools_codegen",
- "version_check",
-]
-
-[[package]]
-name = "rocket_db_pools_codegen"
-version = "0.1.0-rc.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0aa8f9b37bb1d4827aa5cca400d74e91d30f4352713cb65d6e7427bafe21336c"
-dependencies = [
- "devise",
- "quote",
-]
-
-[[package]]
 name = "rocket_http"
 version = "0.5.0-rc.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1425,7 +1403,6 @@ dependencies = [
  "mongodb",
  "regex",
  "rocket",
- "rocket_db_pools",
  "serde",
 ]
 

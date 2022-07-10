@@ -4,9 +4,6 @@ use rocket::{
 };
 use rocket::serde::{Deserialize, json::{Json, serde_json}};
 use regex::Regex;
-use rocket_db_pools::{Connection, mongodb};
-
-use crate::MessageCmsDb;
 
 #[derive(Deserialize)]
 pub struct Message {
@@ -57,6 +54,7 @@ pub async fn send_message(message: Json<Message>) -> status::Custom<content::Raw
             HttpStatus::new(valid_err.code), 
             content::RawJson(json_response.to_string()))
     }
+    
     
     status::Custom(
         HttpStatus::new(200), 
