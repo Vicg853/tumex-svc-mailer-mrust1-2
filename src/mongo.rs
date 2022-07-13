@@ -8,7 +8,7 @@ use mongodb::{
 
 use crate::models::message::Message;
 
-struct MessageCmsDb {
+pub struct MessageCmsDb {
    client: Client,
    msg_col: Collection<Message>
 }
@@ -45,5 +45,8 @@ impl MessageCmsDb {
          },
          Err(err) => panic!("Failed to connect to CMS DB Cluster: {}", err)
       }
+   }
+   pub fn get_msg_col(&self) -> &Collection<Message> {
+      &self.msg_col
    }
 }
