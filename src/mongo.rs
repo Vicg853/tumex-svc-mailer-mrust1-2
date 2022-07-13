@@ -46,8 +46,4 @@ impl MessageCmsDb {
          Err(err) => panic!("Failed to connect to CMS DB Cluster: {}", err)
       }
    }
-
-   pub fn get_client<'a>(&'a mut self) -> &'a mut Client {
-      &mut self.client
-   }
 }
