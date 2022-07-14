@@ -11,6 +11,7 @@ mongodb = "2.2.2"
 serde = { version = "1.0.137", features = ["derive"] }
 regex = "1"
 rocket = { version = "0.5.0-rc.2", features = ["json", "msgpack"] }
+chrono = "0.4"
 
 [profile.release]
 strip = true

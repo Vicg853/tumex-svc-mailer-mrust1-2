@@ -1400,6 +1400,7 @@ dependencies = [
 name = "rust-mailer-api"
 version = "0.1.0"
 dependencies = [
+ "chrono",
  "mongodb",
  "regex",
  "rocket",
