@@ -1,10 +1,11 @@
 #[macro_use] extern crate rocket;
 
-mod app_routes;
 mod models;
 mod mongo;
+mod routes_mod;
 
 use mongo::MessageCmsDb;
+use routes_mod::*;
 
 #[launch]
 async fn rocket() -> _ {
@@ -12,5 +13,8 @@ async fn rocket() -> _ {
 
     rocket::build()
         .manage(cms_db)
-        .mount("/", routes![app_routes::send_message])
+        .mount("/", routes![
+            sd_msg_route,
+            
+        ])
 }

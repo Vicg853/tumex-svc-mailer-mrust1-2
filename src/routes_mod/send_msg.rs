@@ -1,12 +1,21 @@
+use chrono::{Utc};
+use regex::Regex;
+use mongodb::{bson::{doc, DateTime}};
 use rocket::{
     response::{content, status},
-    http::{Status as HttpStatus}
+    http::{Status as HttpStatus}, 
+    State,
+    warn,
+    serde::{Deserialize, json::{Json, serde_json}}
 };
-use rocket::serde::{Deserialize, json::{Json, serde_json}};
-use regex::Regex;
+
+use crate::{
+    MessageCmsDb,
+    models::message::Message
+};
 
 #[derive(Deserialize)]
-pub struct Message {
+pub struct NewMessagePayload {
    pub from: String,
    pub name: String,
    pub subject: String,
@@ -19,7 +28,7 @@ struct ValidError<'c> {
 }
 
 
-impl<'c> Message {
+impl<'c> NewMessagePayload {
     fn is_valid(&self) -> Result<(), ValidError<'c>> {
         const EMAIL_RGX: &str = r"^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9]+(\.[a-zA-Z0-9-]{0,61})+$";
 
@@ -39,7 +48,7 @@ impl<'c> Message {
 //TODO + other sec shit
 
 #[post("/send", format = "application/json", data = "<message>")]
-pub async fn send_message(message: Json<Message>) -> status::Custom<content::RawJson<String>> {
+pub async fn send_message(cms_db: &State<MessageCmsDb>, message: Json<NewMessagePayload>) -> status::Custom<content::RawJson<String>> {
     let message = message.into_inner();
     let validated = message.is_valid();
 
@@ -55,8 +64,25 @@ pub async fn send_message(message: Json<Message>) -> status::Custom<content::Raw
             content::RawJson(json_response.to_string()))
     }
     
+    let msg_doc = Message {
+        id: None,
+        created_at: Some(DateTime::from(Utc::now())),
+        from: message.from,
+        name: message.name,
+        subject: message.subject,
+        message: message.message,
+        read: false
+    };
     
-    status::Custom(
-        HttpStatus::new(200), 
-        content::RawJson("Message sent".to_string()))
+    match cms_db.get_msg_col().insert_one(msg_doc, None).await {
+        Ok(_) => status::Custom(
+            HttpStatus::new(200), 
+            content::RawJson(String::from("Your message has been sent!"))),
+        Err(err) => {
+            warn!("Failed to insert new message into CMS MSG DB: {}", err);
+            status::Custom(
+                HttpStatus::new(500), 
+                content::RawJson(String::from("Sorry, something went wrong when sending your message. Please try again.")))
+        }
+    }
 }
