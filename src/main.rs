@@ -4,8 +4,13 @@ mod app_routes;
 mod models;
 mod mongo;
 
+use mongo::MessageCmsDb;
+
 #[launch]
-fn rocket() -> _ {
+async fn rocket() -> _ {
+    let cms_db = MessageCmsDb::init().await;
+
     rocket::build()
+        .manage(cms_db)
         .mount("/", routes![app_routes::send_message])
 }
