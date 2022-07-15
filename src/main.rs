@@ -3,6 +3,8 @@
 mod models;
 mod mongo;
 mod routes_mod;
+mod guards;
+mod auth;
 
 use mongo::MessageCmsDb;
 use routes_mod::*;
