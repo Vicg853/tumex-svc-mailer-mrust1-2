@@ -72,7 +72,7 @@ async fn fetch_components() -> Result<Vec<KeyComponents>, ReqwestErr> {
 }
 
 impl PublicKeys {
-   async fn new() -> Result<Self, ReqwestErr> {
+   pub async fn new() -> Result<Self, ReqwestErr> {
       let keys = fetch_components().await;
 
       if keys.is_err() {
@@ -83,7 +83,7 @@ impl PublicKeys {
       Ok(PublicKeys(keys.unwrap()))
    }
 
-   async fn refetch_keys(&mut self) -> Result<(), ReqwestErr> {
+   pub async fn refetch_keys(&mut self) -> Result<(), ReqwestErr> {
       let keys = fetch_components().await;
 
       if keys.is_err() {
@@ -95,13 +95,13 @@ impl PublicKeys {
       Ok(())
    }
 
-   fn get_components(&self, kid: &str) -> Option<&KeyComponents> {
+   pub fn get_components(&self, kid: &str) -> Option<&KeyComponents> {
       self.0.iter().find(|key| {
          **key.kid == kid
       })
    }
 
-   fn rsa_from_components(&self, kid: &str) -> Option<Result<String, RsaErrStack>> {
+   pub fn rsa_from_components(&self, kid: &str) -> Option<Result<String, RsaErrStack>> {
       let components = self.get_components(kid)?;
 
       match Rsa::from_public_components(
