@@ -8,13 +8,18 @@ mod auth;
 
 use mongo::MessageCmsDb;
 use routes_mod::*;
+use auth::PublicKeys;
 
 #[launch]
 async fn rocket() -> _ {
     let cms_db = MessageCmsDb::init().await;
+    let pub_jwks = PublicKeys::new().await
+        .expect("Failed starting auth0 public jwk set fetcher!");
+
 
     rocket::build()
         .manage(cms_db)
+        .manage(pub_jwks)
         .mount("/", routes![
             sd_msg_route,
             
