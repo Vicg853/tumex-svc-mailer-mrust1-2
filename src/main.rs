@@ -24,4 +24,7 @@ async fn rocket() -> _ {
             sd_msg_route,
             
         ])
+        .mount("/message", routes![
+            gt_msg_route,
+        ])
 }
