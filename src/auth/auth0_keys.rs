@@ -1,7 +1,6 @@
 use rocket::{warn, log::private::info};
 use std::{vec::Vec, env};
 use reqwest::{get, Error as ReqwestErr};
-use serde::Deserialize;
 use jsonwebtokens::raw::decode_header_only;
 
 fn tennant_endpoint() -> String {
@@ -12,14 +11,17 @@ fn tennant_endpoint() -> String {
 }
 const PUB_KEYS_PATH: &str = "/.well-known/jwks.json";
 
-
-#[derive(Debug, Deserialize)]
-pub struct Modulus(String);
-#[derive(Debug, Deserialize)]
-pub struct Exponent(String);
+pub mod auth0_key_components {
+   use serde::Deserialize;
+   
+   #[derive(Debug, Deserialize)]
+   pub struct Modulus(pub String);
+   #[derive(Debug, Deserialize)]
+   pub struct Exponent(pub String);
+}
 mod auth0_jwk_set {
     use serde::Deserialize;
-    use super::{Modulus, Exponent};
+    use super::auth0_key_components::{Modulus, Exponent};
 
     #[derive(Deserialize)]
    pub struct TenantKey {
@@ -39,6 +41,7 @@ mod auth0_jwk_set {
    }
 }
 
+use auth0_key_components::{Exponent, Modulus};
 #[derive(Debug)]
 struct KeyComponents {
    pub modulus: Modulus,
