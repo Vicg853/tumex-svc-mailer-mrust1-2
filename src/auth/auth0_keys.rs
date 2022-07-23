@@ -1,6 +1,7 @@
 use rocket::{warn, log::private::info};
 use std::{vec::Vec, env};
 use reqwest::{get, Error as ReqwestErr};
+use serde::Deserialize;
 use openssl::{
    error::ErrorStack as RsaErrStack, 
    rsa::Rsa,
@@ -15,8 +16,14 @@ fn tennant_endpoint() -> String {
 }
 const PUB_KEYS_PATH: &str = "/.well-known/jwks.json";
 
+
+#[derive(Debug, Deserialize)]
+pub struct Modulus(String);
+#[derive(Debug, Deserialize)]
+pub struct Exponent(String);
 mod auth0_jwk_set {
     use serde::Deserialize;
+    use super::{Modulus, Exponent};
 
     #[derive(Deserialize)]
    pub struct TenantKey {
@@ -24,8 +31,8 @@ mod auth0_jwk_set {
       pub kty: String,
       pub r#use: String,
       pub x5c: Vec<String>,
-      pub n: String,
-      pub e: String,
+      pub n: Modulus,
+      pub e: Exponent,
       pub kid: String,
       pub x5t: String
    }
@@ -38,8 +45,8 @@ mod auth0_jwk_set {
 
 #[derive(Debug)]
 struct KeyComponents {
-   pub modulus: String,
-   pub exponent: String,
+   pub modulus: Modulus,
+   pub exponent: Exponent,
    pub kid: String,
 }
 
@@ -109,31 +116,5 @@ impl PublicKeys {
       self.0.iter().find(|&key| {
          *key.kid == *kid
       })
-   }
-
-   pub fn rsa_from_components(&self, kid: &str) -> Option<Result<Vec<u8>, RsaErrStack>> {
-      let components = self.get_components(kid)?;
-
-      let modulus = BigNum::from_dec_str(&components.modulus)
-         .ok()?;
-      let exponent = BigNum::from_dec_str(&components.exponent)
-         .ok()?;
-
-      match Rsa::from_public_components(modulus, exponent) {
-         Ok(rsa) => {
-            let pem = rsa.public_key_to_pem_pkcs1();
-
-            if pem.is_err() {
-               warn!("Failed to convert public key to PEM format. The following error was encountered: {}", pem.as_ref().err().unwrap());
-               Some(Err(pem.err().unwrap()))
-            } else {
-               Some(Ok(pem.unwrap()))
-            }
-         }
-         Err(err) => {
-            warn!("Failed to convert public key to RSA format. The following error was encountered: {}", err);
-            Some(Err(err))
-         }
-      }
    }
 }
