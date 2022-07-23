@@ -1,4 +1,4 @@
-use rocket::warn;
+use rocket::{warn, log::private::info};
 use std::{vec::Vec, env};
 use reqwest::{get, Error as ReqwestErr};
 use openssl::{
@@ -47,6 +47,7 @@ struct KeyComponents {
 pub struct PublicKeys(Vec<KeyComponents>);
 
 async fn fetch_components() -> Result<Vec<KeyComponents>, ReqwestErr> {
+   info!("Fetching public keys from {}", tennant_endpoint());
    let endpt = tennant_endpoint();
    let url = format!("{}{}", endpt.to_owned(), PUB_KEYS_PATH);
 
