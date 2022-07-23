@@ -2,11 +2,7 @@ use rocket::{warn, log::private::info};
 use std::{vec::Vec, env};
 use reqwest::{get, Error as ReqwestErr};
 use serde::Deserialize;
-use openssl::{
-   error::ErrorStack as RsaErrStack, 
-   rsa::Rsa,
-   bn::BigNum
-};
+use jsonwebtokens::raw::decode_header_only;
 
 fn tennant_endpoint() -> String {
    match env::var("TENNANT_ENDPOINT") {
@@ -116,5 +112,34 @@ impl PublicKeys {
       self.0.iter().find(|&key| {
          *key.kid == *kid
       })
+   }
+
+   pub fn get_components_by_kid(&self, jwt: &str) -> Option<&KeyComponents> {
+      let mut kid = String::new();
+      let decoded_token_head = decode_header_only(&jwt);
+
+      if decoded_token_head.is_ok() {
+         let decoded_token = decoded_token_head.unwrap();
+
+         let opt_kid = decoded_token.get("kid");
+
+         if opt_kid.is_none() {
+            return None;
+         } else {
+            kid.push_str(opt_kid.unwrap().as_str().unwrap());
+         }
+      } else {
+         warn!("Failed to decode token: {}", 
+            decoded_token_head.err().as_ref().unwrap());
+         return None;
+      }
+
+      match self.get_components(kid.as_str()) {
+         Some(jwt) => Some(jwt),
+         None => {
+            warn!("Failed to find kid in jwks. KID: {}", kid.as_str());
+            None
+         }
+      }
    }
 }
