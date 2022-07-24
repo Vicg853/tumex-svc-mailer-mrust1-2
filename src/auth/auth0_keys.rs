@@ -1,5 +1,5 @@
 use rocket::{warn, log::private::info};
-use std::{vec::Vec, env};
+use std::{vec::Vec, env, borrow::BorrowMut};
 use reqwest::{get, Error as ReqwestErr};
 use jsonwebtokens::raw::decode_header_only;
 
@@ -43,7 +43,7 @@ mod auth0_jwk_set {
 
 use auth0_key_components::{Exponent, Modulus};
 #[derive(Debug)]
-struct KeyComponents {
+pub struct KeyComponents {
    pub modulus: Modulus,
    pub exponent: Exponent,
    pub kid: String,
