@@ -1,5 +1,5 @@
 use serde_json::Value as SerdeVal;
-use std::{env, vec::Vec, rc::Rc};
+use std::env;
 use jsonwebtokens::{
    error::Error as JwtErr, 
    AlgorithmID, Algorithm,
@@ -14,7 +14,7 @@ use rocket::{
 use crate::auth::{
    auth0_key_components::{Exponent, Modulus},
    Auth0TokenRelated::{Auth0TokenFields},
-   Auth0Perms::{IsClaims}, 
+   Auth0Perms,
    PublicKeys
 };
 
@@ -29,11 +29,7 @@ fn this_aud() -> String {
 
 pub struct Auth{
    pub raw_token: String,
-   pub user_id: String,
    pub decoded_payload: Auth0TokenFields,
-   pub user_permissions: Vec<String>,
-   pub user_roles: Option<Vec<String>>,
-   pub is_claims: Vec<IsClaims>
 }
 
 #[derive(Debug)]
@@ -112,6 +108,35 @@ impl<'r> FromRequest<'r> for Auth {
             }
          }
       }; 
+
+      //* Token decode and processing closure for re-use
+      let get_auth_data = |tkn: &str, verified_tkn: SerdeVal| {
+         let token_obj = Auth0TokenFields::from_serde_val(verified_tkn).unwrap();
+
+         Auth {
+            raw_token: tkn.to_owned(),
+            decoded_payload: token_obj,
+         }
+      };
+
+      let has_min_perms = |auth_data: &Auth| -> bool {
+         let user_perms = &auth_data.decoded_payload.permissions;
+         let user_is_claims = &auth_data.decoded_payload.is_claims;
+
+         let perms_check = match user_perms {
+            Some(perm) => perm.contains(&Auth0Perms::Permissions::MAILER_BASE_ACCESS),
+            None => false
+         };
+
+         let is_claims_check = match user_is_claims {
+            Some(is_claims) if is_claims.contains(&Auth0Perms::IsClaims::TUMEX) => true,
+            Some(is_claims) if is_claims.contains(&Auth0Perms::IsClaims::SUDO_HIGH) => true,
+            Some(_) | None => false
+         };
+         
+
+         perms_check || is_claims_check
+      };
       
 
       //* Finally, verify the token
@@ -121,20 +146,20 @@ impl<'r> FromRequest<'r> for Auth {
       match verify(&token, n, e, kid) {
          Ok(res) => {
             drop(jwks_vec);
-            let token_obj = Auth0TokenFields::from_serde_val(res).unwrap();
+            let auth_data = get_auth_data(&token, res);
 
-            Outcome::Success(Auth {
-               raw_token: token.to_owned(),
-               decoded_payload: token_obj.clone(),
-               user_id: token_obj.sub.clone(),
-               user_permissions: token_obj.permissions.clone(),
-               user_roles: token_obj.role,
-               is_claims: IsClaims::from_perms(&token_obj.permissions)
-            })
+            if !has_min_perms(&auth_data) {
+               Outcome::Failure((
+                  HttpStatus::new(403), 
+                  AuthOutcomeErr::Forbidden("User does not have sufficient permissions!".to_owned())
+               ))
+            } else {
+               Outcome::Success(auth_data)
+            }
          },
          Err(_) => {
             //TODO Make this safer by creating a function wrapper that autmatically drops the lock
-            //! and also uses RwLock to ensure additional safety by keeping track of read/write refs
+            // ! and also uses RwLock to ensure additional safety by keeping track of read/write refs
             drop(jwks_vec);
 
             //* Try refetching public keys from auth0 and try again
@@ -164,16 +189,16 @@ impl<'r> FromRequest<'r> for Auth {
             match verify(&token, n, e, kid) {
                Ok(res) => {
                   drop(jwks_vec);
-                  let token_obj = Auth0TokenFields::from_serde_val(res).unwrap();
+                  let auth_data = get_auth_data(&token, res);
 
-                  Outcome::Success(Auth {
-                     raw_token: token.to_owned(),
-                     decoded_payload: token_obj.clone(),
-                     user_id: token_obj.sub.clone(),
-                     user_permissions: token_obj.permissions.clone(),
-                     user_roles: token_obj.role,
-                     is_claims: IsClaims::from_perms(&token_obj.permissions)
-                  })
+                  if !has_min_perms(&auth_data) {
+                     Outcome::Failure((
+                        HttpStatus::new(403), 
+                        AuthOutcomeErr::Forbidden("User does not have sufficient permissions!".to_owned())
+                     ))
+                  } else {
+                     Outcome::Success(auth_data)
+                  }
                },
                Err(_) => {
                   drop(jwks_vec);
