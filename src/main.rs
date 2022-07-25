@@ -1,4 +1,7 @@
+#![feature(async_closure)]
 #[macro_use] extern crate rocket;
+use console_subscriber;
+
 
 mod models;
 mod mongo;
@@ -12,6 +15,8 @@ use auth::PublicKeys;
 
 #[launch]
 async fn rocket() -> _ {
+    console_subscriber::init();
+
     let cms_db = MessageCmsDb::init().await;
     let pub_jwks = PublicKeys::new().await
         .expect("Failed starting auth0 public jwk set fetcher!");
