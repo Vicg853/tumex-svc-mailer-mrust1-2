@@ -1,18 +1,32 @@
 [env]
 RUSTFLAGS="--cfg tokio_unstable"
+RUST_BACKTRACE = 0
 
+#########################################################################################
+## Check and tests related tasks
+[tasks.check]
+command = "cargo check --all"
+
+#########################################################################################
+## Build profiles related tasks
 [tasks.build]
 description = "Production ready build"
 script = "fleet build --profile prod --out-dir ./build"
 
+[tasks.debug-build]
+description = "Production debug build"
+script = "fleet build --profile prod --out-dir ./build"
+
+#########################################################################################
+## Runtime related tasks (both for development, production and debug)
 [tasks.start]
 description = "Start the server aftear a production build"
-script = "./build/"
-#dependencies = ["build"]
+script = "./target/debug/rust-mailer-api"
+dependencies = ["build"]
 
 [tasks.start-no-build]
 description = "Start the server aftear a production build"
-#script = "./build/"
+script = "./target/debug/rust-mailer-api"
 
 [tasks.dev]
 description = "Run the development command"
@@ -22,4 +36,29 @@ env_files = [
 ]
 watch = { ignore_pattern = ".*", watch = [ "./src/", ".env"] }
 
+#########################################################################################
+## Debug related tasks
+[tasks.heaptrack-prod]
+description = "Run heaptrack on a production profile"
+script = "heaptrack ./target/debug/rust-mailer-api"
+
+[tasks.tokio-console-prod]
+description = "Run tokio debug console"
+script = "tokio-console"
+
+[tasks.dev-debug]
+
+[tasks.prod-debug]
+RUST_BACKTRACE = 1
+env_files = [
+   { path = ".env", profile = "development" }
+]
+dependencies = [
+   { name = "check" },
+   { name = "debug-build" }
+]
+run_task = { name = ["heaptrack-prod", "tokio-console-prod"], parallel = true }
+
+#########################################################################################
+## Testing related tasks
 [tasks.test]
