@@ -1,5 +1,6 @@
 use rocket::{warn, log::private::info};
-use std::{vec::Vec, env, borrow::BorrowMut};
+use std::{vec::Vec, env};
+use tokio::sync::{Mutex, MutexGuard};
 use reqwest::{get, Error as ReqwestErr};
 use jsonwebtokens::raw::decode_header_only;
 
@@ -50,7 +51,7 @@ pub struct KeyComponents {
 }
 
 #[derive(Debug)]
-pub struct PublicKeys(Vec<KeyComponents>);
+pub struct PublicKeys(pub Mutex<Vec<KeyComponents>>);
 
 async fn fetch_components() -> Result<Vec<KeyComponents>, ReqwestErr> {
    info!("Fetching public keys from {}", tennant_endpoint());
@@ -96,10 +97,10 @@ impl PublicKeys {
          return Err(keys.err().unwrap())
       }
 
-      Ok(PublicKeys(keys.unwrap()))
+      Ok(PublicKeys(Mutex::new(keys.unwrap())))
    }
 
-   pub async fn refetch_keys(&mut self) -> Result<(), ReqwestErr> {
+   pub async fn refetch_keys(&self) -> Result<(), ReqwestErr> {
       let keys = fetch_components().await;
 
       if keys.is_err() {
@@ -107,17 +108,21 @@ impl PublicKeys {
          return Err(keys.err().unwrap())
       }
 
-      self.0 = keys.unwrap();
+      let mut prev_keys = self.0.lock().await;
+      prev_keys.clear();
+      prev_keys.extend(keys.unwrap());
+
+      drop(prev_keys);
       Ok(())
    }
 
-   pub fn get_components(&self, kid: &str) -> Option<&KeyComponents> {
-      self.0.iter().find(|&key| {
+   pub fn get_components<'guard>(locked_components: &'guard MutexGuard<'guard, Vec<KeyComponents>>, kid: &str) -> Option<&'guard KeyComponents> {
+      locked_components.iter().find(|&key| {
          *key.kid == *kid
       })
    }
 
-   pub fn get_components_by_kid(&self, jwt: &str) -> Option<&KeyComponents> {
+   pub fn get_components_by_kid<'guard>(locked_components: &'guard MutexGuard<'guard, Vec<KeyComponents>>, jwt: &str) -> Option<&'guard KeyComponents> {
       let mut kid = String::new();
       let decoded_token_head = decode_header_only(&jwt);
 
@@ -137,7 +142,7 @@ impl PublicKeys {
          return None;
       }
 
-      match self.get_components(kid.as_str()) {
+      match Self::get_components(locked_components, kid.as_str()) {
          Some(jwt) => Some(jwt),
          None => {
             warn!("Failed to find kid in jwks. KID: {}", kid.as_str());
