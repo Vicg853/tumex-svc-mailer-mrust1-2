@@ -1,4 +1,5 @@
 pub mod Auth0Perms {
+   #[derive(Eq, PartialEq)]
    pub enum IsClaims {
       TUMEX,
       FRIENDS_NORMAL,
@@ -49,6 +50,7 @@ pub mod Auth0Perms {
       }
    }
    
+   #[derive(Eq, PartialEq)]
    pub enum Permissions {
       MAILER_BASE_ACCESS,
       MAILER_WEBP_MSGS_READ,
