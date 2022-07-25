@@ -84,23 +84,26 @@ impl<'r> FromRequest<'r> for Auth {
             AuthOutcomeErr::Unexpected
          ));
       }
-      let the_jwk = the_jwk.unwrap();
-      
+      let the_jwk = the_jwk.unwrap().to_owned();
 
       //* Verify closure for re-use in case of jwt failure
-      let verify = |token: &str, n: &Modulus, e: &Exponent| -> Result<SerdeVal, JwtErr> {
+      let verify = |token: &str, modulus: &Modulus, exponent: &Exponent, comps_kid: &str| -> Result<SerdeVal, JwtErr> {
          let algo = match Algorithm::new_rsa_n_e_b64_verifier(
             AlgorithmID::RS256, 
-            &n.0, 
-            &e.0
+            &modulus.0, 
+            &exponent.0
          ) {
-            Ok(algo) => algo,
+            Ok(mut algo) => {
+               algo.set_kid(comps_kid);
+               algo
+            },
             Err(err) => {
                warn!("Failed to create RSA verifier. Error: {}", err);
                return Err(err);
             }
          };
-
+         
+         info!("Verifying token with RSA verifier: Algo = {:?}", algo.id());
          match verifier.verify(token, &algo) {
             Ok(token_data) => Ok(token_data),
             Err(err) => {
@@ -114,9 +117,11 @@ impl<'r> FromRequest<'r> for Auth {
       //* Finally, verify the token
       let e = &the_jwk.exponent;
       let n = &the_jwk.modulus;
-      match verify(&token, n, e) {
+      let kid = &the_jwk.kid;
+      match verify(&token, n, e, kid) {
          Ok(res) => {
-            let token_obj = Auth0TokenFields::from_serde_val(&res).unwrap();
+            drop(jwks_vec);
+            let token_obj = Auth0TokenFields::from_serde_val(res).unwrap();
 
             Outcome::Success(Auth {
                raw_token: token.to_owned(),
@@ -128,8 +133,11 @@ impl<'r> FromRequest<'r> for Auth {
             })
          },
          Err(_) => {
-            //* Try refetching public keys from auth0 and try again
+            //TODO Make this safer by creating a function wrapper that autmatically drops the lock
+            //! and also uses RwLock to ensure additional safety by keeping track of read/write refs
+            drop(jwks_vec);
 
+            //* Try refetching public keys from auth0 and try again
             match jwks.refetch_keys().await {
                Err(_) => return Outcome::Failure((
                   HttpStatus::new(500), 
@@ -138,7 +146,6 @@ impl<'r> FromRequest<'r> for Auth {
                Ok(_) => {}
             }
 
-            drop(jwks_vec);
             let jwks_vec = jwks.0.lock().await;
             let the_jwk = PublicKeys::get_components_by_kid(&jwks_vec,&token);
             if the_jwk.is_none() {
@@ -147,15 +154,17 @@ impl<'r> FromRequest<'r> for Auth {
                   AuthOutcomeErr::Unexpected
                ));
             }
-            let the_jwk = the_jwk.unwrap();
+            let the_jwk = the_jwk.unwrap().to_owned();
             
             let e = &the_jwk.exponent;
             let n = &the_jwk.modulus;
+            let kid = &the_jwk.kid;
 
             //* Second attempt to verify the token, with possibly new keys
-            match verify(&token, n, e) {
+            match verify(&token, n, e, kid) {
                Ok(res) => {
-                  let token_obj = Auth0TokenFields::from_serde_val(&res).unwrap();
+                  drop(jwks_vec);
+                  let token_obj = Auth0TokenFields::from_serde_val(res).unwrap();
 
                   Outcome::Success(Auth {
                      raw_token: token.to_owned(),
@@ -166,10 +175,13 @@ impl<'r> FromRequest<'r> for Auth {
                      is_claims: IsClaims::from_perms(&token_obj.permissions)
                   })
                },
-               Err(_) => Outcome::Failure((
-                  HttpStatus::new(401),
-                  AuthOutcomeErr::InvalidToken("We we unsable to verify your identity, your token is invalid!".to_owned())
-               ))
+               Err(_) => {
+                  drop(jwks_vec);
+                  Outcome::Failure((
+                     HttpStatus::new(401),
+                     AuthOutcomeErr::InvalidToken("We we unsable to verify your identity, your token is invalid!".to_owned())
+                  ))
+               }
             }
          }
       }
