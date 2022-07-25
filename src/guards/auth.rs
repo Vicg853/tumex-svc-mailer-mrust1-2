@@ -13,8 +13,8 @@ use rocket::{
 
 use crate::auth::{
    auth0_key_components::{Exponent, Modulus},
-   Auth0TokenRelated::{Auth0TokenFields},
-   Auth0Perms,
+   auth0_token_related::{Auth0TokenFields},
+   auth0_perms,
    PublicKeys
 };
 
@@ -124,13 +124,13 @@ impl<'r> FromRequest<'r> for Auth {
          let user_is_claims = &auth_data.decoded_payload.is_claims;
 
          let perms_check = match user_perms {
-            Some(perm) => perm.contains(&Auth0Perms::Permissions::MAILER_BASE_ACCESS),
+            Some(perm) => perm.contains(&auth0_perms::Permissions::MAILER_BASE_ACCESS),
             None => false
          };
 
          let is_claims_check = match user_is_claims {
-            Some(is_claims) if is_claims.contains(&Auth0Perms::IsClaims::TUMEX) => true,
-            Some(is_claims) if is_claims.contains(&Auth0Perms::IsClaims::SUDO_HIGH) => true,
+            Some(is_claims) if is_claims.contains(&auth0_perms::IsClaims::TUMEX) => true,
+            Some(is_claims) if is_claims.contains(&auth0_perms::IsClaims::SUDO_HIGH) => true,
             Some(_) | None => false
          };
          

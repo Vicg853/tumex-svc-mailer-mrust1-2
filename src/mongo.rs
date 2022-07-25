@@ -15,11 +15,13 @@ pub struct MessageCmsDb {
 
 impl MessageCmsDb {
    pub async fn init() -> Self {
+      #[allow(non_snake_case)]
       let CMS_DB_CLUST_URI = match env::var("CMS_DB_CLUST_URI") {
          Ok(val) => val,
          Err(_) => panic!("CMS_DB_CLUST_URI environment must be set")
       };
 
+      #[allow(non_snake_case)]
       let CMS_MSG_DB_NAME = match env::var("CMS_MSG_DB_NAME") {
          Ok(val) => val,
          Err(_) => panic!("CMS_MSG_DB_NAME environment must be set")

@@ -1,4 +1,6 @@
-pub mod Auth0Perms {
+#[allow(non_camel_case_types)]
+
+pub mod auth0_perms {
    #[derive(Eq, PartialEq)]
    pub enum IsClaims {
       TUMEX,
@@ -83,11 +85,9 @@ pub mod Auth0Perms {
 }
 
 
-pub mod Auth0TokenRelated {
-   use std::ops::DerefMut;
-
-use serde_json::Value;
-   use super::Auth0Perms::*;
+pub mod auth0_token_related {
+   use serde_json::Value;
+   use super::auth0_perms::*;
 
    pub struct AudienceIdentifier(pub String);
 
