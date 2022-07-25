@@ -63,51 +63,90 @@ pub mod Auth0Perms {
             Permissions::MAILER_WEBP_MSGS_DEL => "mailer:webp:messages:delete",
          }
       }
+
+      pub fn from_perms(perms: &Vec<String>) -> Vec<Self>  {
+         let mut claims: Vec<Permissions> = Vec::new();
+         
+         for perm in perms {
+            match perm.as_str() {
+               "mailer:baseaccess" => claims.push(Permissions::MAILER_BASE_ACCESS),
+               "mailer:webp:messages:read" => claims.push(Permissions::MAILER_WEBP_MSGS_READ),
+               "mailer:webp:messages:delete" => claims.push(Permissions::MAILER_WEBP_MSGS_DEL),
+               _ => {}
+            }
+         }
+         claims
+      }
    }
 }
 
 
 pub mod Auth0TokenRelated {
-   use std::clone::Clone;
-   use serde_json::Value;
+   use std::ops::DerefMut;
 
-   #[derive(Clone)]
+use serde_json::Value;
+   use super::Auth0Perms::*;
+
    pub struct AudienceIdentifier(pub String);
 
-   #[derive(Clone)]
    pub struct AudienceUri(pub String);
 
-   #[derive(Clone)]
    pub struct Auth0TokenFields {
-      pub iss: String,
-      pub sub: String,
+      pub iss: Option<String>,
+      pub sub: Option<String>,
       pub aud: Option<(AudienceIdentifier, AudienceUri)>,
-      pub azp: String,
-      pub exp: usize,
-      pub iat: usize,
-      pub scope: Vec<String>,
-      pub permissions: Vec<String>,
+      pub azp: Option<String>,
+      pub exp: Option<u64>,
+      pub iat: Option<u64>,
+      pub scope: Option<Vec<String>>,
+      pub permissions: Option<Vec<Permissions>>,
+      pub raw_permissions: Option<Vec<String>>,
+      pub is_claims: Option<Vec<IsClaims>>,
       pub role: Option<Vec<String>>,
    }
 
    impl Auth0TokenFields {
-      pub fn from_serde_val(token: &Value) -> Result<Self, ()> {
+      pub fn from_serde_val(token: Value) -> Result<Self, ()> {
          Ok(Auth0TokenFields {
-            iss: token["iss"].as_str().unwrap().to_string(),
-            sub: token["sub"].as_str().unwrap().to_string(),
-            aud: Some((
-              AudienceIdentifier(token["aud"][0].as_str().unwrap().to_string()),
-              AudienceUri(token["aud"][1].as_str().unwrap().to_string()),
+            iss: token.get("iss").and_then(|x| Some(x.to_string())),
+            sub: token.get("sub").and_then(|x| Some(x.to_string())),
+            aud: match token.get("aud").and_then(|x| x.as_array()) {
+               Some(aud) => {
+                  if aud[0].is_null() || aud[1].is_null() {
+                     None
+                  } else {
+                     Some((AudienceIdentifier(aud[0].to_string()), AudienceUri(aud[1].to_string())))
+                  }
+               },
+               _ => None
+            },
+            azp: token.get("azp").and_then(|x| Some(x.to_string())),
+            exp: token.get("exp").and_then(|x| x.as_u64()),
+            iat: token.get("iat").and_then(|x| x.as_u64()),
+            scope: token.get("scope").and_then(|scope| scope.as_array()
+               .and_then(|vec| Some(
+                  vec.iter().map(|x| x.to_string()).collect()
+               ))
+            ),
+            permissions: token.get("permissions").and_then(|perms | perms.as_array())
+            .and_then(|vec| Some(
+               Permissions::from_perms(&vec.iter().map(|x| x.to_string()).collect())
             )),
-            azp: token["azp"].as_str().unwrap().to_string(),
-            exp: token["exp"].as_i64().unwrap() as usize,
-            iat: token["iat"].as_u64().unwrap() as usize,
-            scope: token["scope"].as_array().unwrap().iter().map(|x| x.as_str().unwrap().to_string()).collect(),
-            permissions: token["permissions"].as_array().unwrap().iter().map(|x| x.as_str().unwrap().to_string()).collect(),
-            role: match token["role"].is_null() {
-               true => Some(token["role"].as_array().unwrap().iter().map(|x| x.as_str().unwrap().to_string()).collect()),
-               false => None,
-            }
+            raw_permissions: token.get("raw_permissions").and_then(|perms | perms.as_array()
+               .and_then(|vec| Some(
+                  vec.iter().map(|x| x.to_string()).collect()
+               ))
+            ),
+            is_claims: token.get("is_claims").and_then(|perms | perms.as_array()
+               .and_then(|vec| Some(
+                  IsClaims::from_perms(&vec.iter().map(|x| x.to_string()).collect())
+               ))
+            ),
+            role: token.get("role").and_then(|role| role.as_array()
+               .and_then(|vec| Some(
+                  vec.iter().map(|x| x.to_string()).collect()
+               ))
+            ),
          })
       }
    }
