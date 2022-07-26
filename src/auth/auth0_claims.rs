@@ -1,6 +1,10 @@
 #[allow(non_camel_case_types)]
 
 pub mod auth0_perms {
+   pub trait ClaimsToEnumConstructors where Self: Sized {
+      fn from_perms(_perms: &Vec<String>) -> Vec<Self> { Vec::new() }
+   }
+   
    #[derive(Eq, PartialEq)]
    pub enum IsClaims {
       TUMEX,
@@ -14,6 +18,7 @@ pub mod auth0_perms {
       SUDO_HIGH,
    }
    
+
    impl IsClaims {
       pub fn as_str(&self) -> &'static str {
          match self {
@@ -30,8 +35,8 @@ pub mod auth0_perms {
       }
 
    }
-   impl IsClaims {
-      pub fn from_perms(perms: &Vec<String>) -> Vec<Self>  {
+   impl ClaimsToEnumConstructors for IsClaims {
+      fn from_perms(perms: &Vec<String>) -> Vec<Self>  {
          let mut claims: Vec<IsClaims> = Vec::new();
          
          for perm in perms {
@@ -67,8 +72,10 @@ pub mod auth0_perms {
             Permissions::MAILER_WEBP_MSGS_DEL => "mailer:webp:messages:delete",
          }
       }
-
-      pub fn from_perms(perms: &Vec<String>) -> Vec<Self>  {
+   }
+   
+   impl ClaimsToEnumConstructors for Permissions {
+      fn from_perms(perms: &Vec<String>) -> Vec<Self>  {
          let mut claims: Vec<Permissions> = Vec::new();
          
          for perm in perms {
