@@ -72,7 +72,7 @@ impl<'r> FromRequest<'r> for Auth {
       }
       let jwks = jwks.unwrap();
 
-      let jwks_vec = jwks.0.lock().await;
+      let jwks_vec = jwks.0.read().await;
       let the_jwk = PublicKeys::get_components_by_kid(&jwks_vec, &token);
       if the_jwk.is_none() {
          return Outcome::Failure((
@@ -171,7 +171,7 @@ impl<'r> FromRequest<'r> for Auth {
                Ok(_) => {}
             }
 
-            let jwks_vec = jwks.0.lock().await;
+            let jwks_vec = jwks.0.read().await;
             let the_jwk = PublicKeys::get_components_by_kid(&jwks_vec,&token);
             if the_jwk.is_none() {
                return Outcome::Failure((

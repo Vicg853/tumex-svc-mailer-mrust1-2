@@ -1,6 +1,6 @@
 use rocket::{warn, log::private::info};
 use std::{vec::Vec, env};
-use tokio::sync::{Mutex, MutexGuard};
+use tokio::sync::{RwLock, RwLockReadGuard, RwLockWriteGuard};
 use reqwest::{get, Error as ReqwestErr};
 use jsonwebtokens::raw::decode_header_only;
 
@@ -51,7 +51,7 @@ pub struct KeyComponents {
 }
 
 #[derive(Debug)]
-pub struct PublicKeys(pub Mutex<Vec<KeyComponents>>);
+pub struct PublicKeys(pub RwLock<Vec<KeyComponents>>);
 
 async fn fetch_components() -> Result<Vec<KeyComponents>, ReqwestErr> {
    info!("Fetching public keys from {}", tennant_endpoint());
@@ -97,7 +97,7 @@ impl PublicKeys {
          return Err(keys.err().unwrap())
       }
 
-      Ok(PublicKeys(Mutex::new(keys.unwrap())))
+      Ok(PublicKeys(RwLock::new(keys.unwrap())))
    }
 
    pub async fn refetch_keys(&self) -> Result<(), ReqwestErr> {
@@ -108,7 +108,7 @@ impl PublicKeys {
          return Err(keys.err().unwrap())
       }
 
-      let mut prev_keys = self.0.lock().await;
+      let mut prev_keys = self.0.write().await;
       prev_keys.clear();
       prev_keys.extend(keys.unwrap());
 
@@ -116,13 +116,13 @@ impl PublicKeys {
       Ok(())
    }
 
-   pub fn get_components<'guard>(locked_components: &'guard MutexGuard<'guard, Vec<KeyComponents>>, kid: &str) -> Option<&'guard KeyComponents> {
+   pub fn get_components<'guard>(locked_components: &'guard RwLockReadGuard<'guard, Vec<KeyComponents>>, kid: &str) -> Option<&'guard KeyComponents> {
       locked_components.iter().find(|&key| {
          *key.kid == *kid
       })
    }
 
-   pub fn get_components_by_kid<'guard>(locked_components: &'guard MutexGuard<'guard, Vec<KeyComponents>>, jwt: &str) -> Option<&'guard KeyComponents> {
+   pub fn get_components_by_kid<'guard>(locked_components: &'guard RwLockReadGuard<'guard, Vec<KeyComponents>>, jwt: &str) -> Option<&'guard KeyComponents> {
       let mut kid = String::new();
       let decoded_token_head = decode_header_only(&jwt);
 
