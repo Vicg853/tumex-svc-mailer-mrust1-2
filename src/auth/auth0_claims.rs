@@ -130,24 +130,17 @@ pub mod auth0_token_related {
                   vec.iter().map(|x| x.to_string()).collect()
                ))
             ),
-            permissions: token.get("permissions").and_then(|perms | perms.as_array())
-            .and_then(|vec| Some(
-               Permissions::from_perms(&vec.iter().map(|x| x.to_string()).collect())
+            permissions: token.get("permissions").and_then(|perms| Some(
+               Permissions::from_perms(&perms.to_string().split(" ").map(|x| x.to_string()).collect())
             )),
-            raw_permissions: token.get("raw_permissions").and_then(|perms | perms.as_array()
-               .and_then(|vec| Some(
-                  vec.iter().map(|x| x.to_string()).collect()
-               ))
-            ),
-            is_claims: token.get("is_claims").and_then(|perms | perms.as_array()
-               .and_then(|vec| Some(
-                  IsClaims::from_perms(&vec.iter().map(|x| x.to_string()).collect())
-               ))
-            ),
-            role: token.get("role").and_then(|role| role.as_array()
-               .and_then(|vec| Some(
-                  vec.iter().map(|x| x.to_string()).collect()
-               ))
+            raw_permissions: token.get("raw_permissions").and_then(|perms| Some(
+               perms.to_string().split(" ").map(|val| val.to_string()).collect()
+            )),
+            is_claims: token.get("is_claims").and_then(|perms| Some(
+               IsClaims::from_perms(&perms.to_string().split(" ").map(|x| x.to_string()).collect())
+            )),
+            role: token.get("role").and_then(|role| 
+               Some(role.to_string().split(" ").map(|val| val.to_string()).collect())
             ),
          })
       }
