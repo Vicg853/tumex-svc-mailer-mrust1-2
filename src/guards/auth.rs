@@ -14,7 +14,7 @@ use rocket::{
 use crate::auth::{
    auth0_key_components::{Exponent, Modulus},
    auth0_token_related::{Auth0TokenFields},
-   auth0_perms,
+   auth0_perms::{self, check_perms, PermCheckOptions},
    PublicKeys
 };
 
@@ -120,22 +120,36 @@ impl<'r> FromRequest<'r> for Auth {
       };
 
       let has_min_perms = |auth_data: &Auth| -> bool {
+         let mut check_scopes = Vec::new();
          let user_perms = &auth_data.decoded_payload.permissions;
          let user_is_claims = &auth_data.decoded_payload.is_claims;
 
-         let perms_check = match user_perms {
-            Some(perm) => perm.contains(&auth0_perms::Permissions::MAILER_BASE_ACCESS),
-            None => false
-         };
+         if user_perms.is_some() {
+            let user_perms = user_perms.as_ref().unwrap();
+            let user_perms = user_perms.iter()
+               .map(|perm| auth0_perms::Permissions::as_string(perm).to_owned());
+            check_scopes.extend(user_perms);
+         }
 
-         let is_claims_check = match user_is_claims {
-            Some(is_claims) if is_claims.contains(&auth0_perms::IsClaims::TUMEX) => true,
-            Some(is_claims) if is_claims.contains(&auth0_perms::IsClaims::SUDO_HIGH) => true,
-            Some(_) | None => false
-         };
+         if user_is_claims.is_some() {
+            let user_is_claims = user_is_claims.as_ref().unwrap();
+            let user_is_claims = user_is_claims.iter()
+               .map(|claim| auth0_perms::IsClaims::as_string(claim).to_owned());
+            check_scopes.extend(user_is_claims);
+         }
+
+         if check_scopes.len() == 0 { return true; }
+
+         let req_perms = vec![
+            auth0_perms::Permissions::MAILER_BASE_ACCESS.as_string(),
+            auth0_perms::IsClaims::SUDO_HIGH.as_string()
+         ];
          
-
-         perms_check || is_claims_check
+         check_perms(
+            check_scopes.iter().map(|s| s.as_str()).collect(),
+            Some(PermCheckOptions::AtLeastOne(req_perms)),
+            true, true
+         )
       };
       
 
