@@ -7,7 +7,7 @@ use jsonwebtokens::raw::decode_header_only;
 fn tennant_endpoint() -> String {
    match env::var("TENNANT_ENDPOINT") {
       Ok(val) => val,
-      Err(_) => panic!("TENANT_ENDPOINT environment must be set")
+      Err(_) => panic!("TENNANT_ENDPOINT environment must be set")
    }
 }
 const PUB_KEYS_PATH: &str = "/.well-known/jwks.json";

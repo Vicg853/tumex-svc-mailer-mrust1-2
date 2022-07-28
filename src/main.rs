@@ -1,4 +1,4 @@
-#![feature(async_closure)]
+#![feature(async_closure, if_let_guard)]
 #[macro_use] extern crate rocket;
 use console_subscriber;
 

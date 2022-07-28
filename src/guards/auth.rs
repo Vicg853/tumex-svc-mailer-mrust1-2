@@ -204,7 +204,7 @@ impl<'r> FromRequest<'r> for Auth {
                   drop(jwks_vec);
                   Outcome::Failure((
                      HttpStatus::new(401),
-                     AuthOutcomeErr::InvalidToken("We we unsable to verify your identity, your token is invalid!".to_owned())
+                     AuthOutcomeErr::InvalidToken("We we unable to verify your identity or your token is invalid!".to_owned())
                   ))
                }
             }
