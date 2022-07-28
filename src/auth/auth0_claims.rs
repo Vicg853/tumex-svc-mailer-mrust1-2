@@ -20,17 +20,17 @@ pub mod auth0_perms {
    
 
    impl IsClaims {
-       pub fn as_string(&self) -> String {
+       pub fn as_string(&self) -> &str {
          match self {
-            IsClaims::TUMEX => "is:tumex".to_string(),
-            IsClaims::FRIENDS_NORMAL => "is:friends:normal".to_string(),
-            IsClaims::FRIENDS_CLOSE => "is:friends:close".to_string(),
-            IsClaims::FRIENDS_BFF => "is:friends:bff".to_string(),
-            IsClaims::FAMILY_FIRST => "is:family:first-deg".to_string(),
-            IsClaims::FAMILY_SECOND => "is:family:second-deg".to_string(),
-            IsClaims::FAMILY_THIRD => "is:family:third-deg".to_string(),
-            IsClaims::SUDO_LOW => "is:sudo:low".to_string(),
-            IsClaims::SUDO_HIGH => "is:sudo:high".to_string()
+            IsClaims::TUMEX => "is:tumex",
+            IsClaims::FRIENDS_NORMAL => "is:friends:normal",
+            IsClaims::FRIENDS_CLOSE => "is:friends:close",
+            IsClaims::FRIENDS_BFF => "is:friends:bff",
+            IsClaims::FAMILY_FIRST => "is:family:first-deg",
+            IsClaims::FAMILY_SECOND => "is:family:second-deg",
+            IsClaims::FAMILY_THIRD => "is:family:third-deg",
+            IsClaims::SUDO_LOW => "is:sudo:low",
+            IsClaims::SUDO_HIGH => "is:sudo:high"
          }
       }
 
@@ -65,11 +65,11 @@ pub mod auth0_perms {
    }
    
    impl Permissions {
-      pub fn as_string(&self) -> String {
+      pub fn as_string(&self) -> &str {
          match self {
-            Permissions::MAILER_BASE_ACCESS => "mailer:baseaccess".to_string(),
-            Permissions::MAILER_WEBP_MSGS_READ => "mailer:webp:messages:read".to_string(),
-            Permissions::MAILER_WEBP_MSGS_DEL => "mailer:webp:messages:delete".to_string(),
+            Permissions::MAILER_BASE_ACCESS => "mailers:baseaccess",
+            Permissions::MAILER_WEBP_MSGS_READ => "mailer:webp:messages:read",
+            Permissions::MAILER_WEBP_MSGS_DEL => "mailer:webp:messages:delete",
          }
       }
    }
@@ -90,15 +90,15 @@ pub mod auth0_perms {
       }
    }
 
-   pub enum PermCheckOptions {
-      AtLeastOne(Vec<String>),
-      All(Vec<String>),
-      None(Vec<String>)
+   pub enum PermCheckOptions<'a>{
+      AtLeastOne(Vec<&'a str>),
+      All(Vec<&'a str>),
+      None(Vec<&'a str>)
    }
 
    pub fn check_perms(
-      usr_perms: &Vec<String>, 
-      req_perms: Option<&PermCheckOptions>, 
+      usr_perms: Vec<&str>, 
+      req_perms: Option<PermCheckOptions>, 
       check_min: bool, 
       check_tumex: bool) -> bool {
       let min_perm = "mailer:baseaccess";
@@ -106,41 +106,38 @@ pub mod auth0_perms {
       let mut min_perms_check = false;
       
       if check_tumex || check_min {
-         for perm in usr_perms {
-            if perm == min_perm && check_min {
+         for perm in usr_perms.iter() {
+            if **perm == *min_perm && check_min {
                min_perms_check = true;
             }
-            if perm == is_tumex && check_tumex {
+            if **perm == *is_tumex && check_tumex {
                return true;
             }
          }
       }
 
       match req_perms {
-         Some(req_perms ) 
-         if let PermCheckOptions::All(req_perms) = req_perms => {
+         Some(PermCheckOptions::All(req_perms)) => {
             for perm in req_perms {
-               if usr_perms.contains(perm) {
+               if usr_perms.contains(&perm) {
                   return false;
                }
             }
 
             return true;
          },
-         Some(req_perms ) 
-         if let PermCheckOptions::AtLeastOne(req_perms) = req_perms => {
+         Some(PermCheckOptions::AtLeastOne(req_perms) ) => {
             for perm in req_perms {
-               if usr_perms.contains(perm) {
+               if usr_perms.contains(&perm) {
                   return true;
                }
             }
 
             return false;
          },
-         Some(req_perms ) 
-         if let PermCheckOptions::None(req_perms) = req_perms => {
+         Some(PermCheckOptions::None(req_perms) ) => {
             for perm in req_perms {
-               if usr_perms.contains(perm) {
+               if usr_perms.contains(&perm) {
                   return false;
                }
             }
