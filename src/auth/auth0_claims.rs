@@ -4,7 +4,7 @@ pub mod auth0_perms {
    pub trait ClaimsToEnumConstructors where Self: Sized {
       fn from_perms(_perms: &Vec<String>) -> Vec<Self> { Vec::new() }
    }
-   
+
    #[derive(Eq, PartialEq)]
    pub enum IsClaims {
       TUMEX,
@@ -20,7 +20,7 @@ pub mod auth0_perms {
    
 
    impl IsClaims {
-      pub fn as_str(&self) -> &'static str {
+       pub fn as_string(&self) -> &'static str {
          match self {
             IsClaims::TUMEX => "is:tumex",
             IsClaims::FRIENDS_NORMAL => "is:friends:normal",
@@ -87,6 +87,67 @@ pub mod auth0_perms {
             }
          }
          claims
+      }
+   }
+
+   pub enum PermCheckOptions {
+      AtLeastOne(Vec<String>),
+      All(Vec<String>),
+      None(Vec<String>)
+   }
+
+   pub fn check_perms(
+      usr_perms: &Vec<String>, 
+      req_perms: Option<&PermCheckOptions>, 
+      check_min: bool, 
+      check_tumex: bool) -> bool {
+      let min_perm = "mailer:baseaccess";
+      let is_tumex = "is:tumex";
+      let mut min_perms_check = false;
+      
+      if check_tumex || check_min {
+         for perm in usr_perms {
+            if perm == min_perm && check_min {
+               min_perms_check = true;
+            }
+            if perm == is_tumex && check_tumex {
+               return true;
+            }
+         }
+      }
+
+      match req_perms {
+         Some(req_perms ) 
+         if let PermCheckOptions::All(req_perms) = req_perms => {
+            for perm in req_perms {
+               if usr_perms.contains(perm) {
+                  return false;
+               }
+            }
+
+            return true;
+         },
+         Some(req_perms ) 
+         if let PermCheckOptions::AtLeastOne(req_perms) = req_perms => {
+            for perm in req_perms {
+               if usr_perms.contains(perm) {
+                  return true;
+               }
+            }
+
+            return false;
+         },
+         Some(req_perms ) 
+         if let PermCheckOptions::None(req_perms) = req_perms => {
+            for perm in req_perms {
+               if usr_perms.contains(perm) {
+                  return false;
+               }
+            }
+
+            return true;
+         },
+         _ => min_perms_check
       }
    }
 }
