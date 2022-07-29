@@ -138,7 +138,7 @@ impl<'r> FromRequest<'r> for Auth {
             check_scopes.extend(user_is_claims);
          }
 
-         if check_scopes.len() == 0 { return true; }
+         if check_scopes.len() == 0 { return false; }
 
          let req_perms = vec![
             auth0_perms::Permissions::MAILER_BASE_ACCESS.as_string(),
