@@ -120,34 +120,32 @@ impl<'r> FromRequest<'r> for Auth {
       };
 
       let has_min_perms = |auth_data: &Auth| -> bool {
-         let mut check_scopes = Vec::new();
-         let user_perms = &auth_data.decoded_payload.permissions;
-         let user_is_claims = &auth_data.decoded_payload.is_claims;
-
-         if user_perms.is_some() {
-            let user_perms = user_perms.as_ref().unwrap();
-            let user_perms = user_perms.iter()
-               .map(|perm| auth0_perms::Permissions::as_string(perm).to_owned());
-            check_scopes.extend(user_perms);
+         let perms = &auth_data.decoded_payload.permissions;
+         let is_claims = &auth_data.decoded_payload.is_claims;
+         if is_claims.is_none() && perms.is_none() {
+            return false;
          }
 
-         if user_is_claims.is_some() {
-            let user_is_claims = user_is_claims.as_ref().unwrap();
-            let user_is_claims = user_is_claims.iter()
-               .map(|claim| auth0_perms::IsClaims::as_string(claim).to_owned());
-            check_scopes.extend(user_is_claims);
+         let is_claims = auth_data.decoded_payload.is_claims.as_ref().unwrap();
+         let perms = auth_data.decoded_payload.permissions.as_ref().unwrap();
+
+         let mut usr_perms: Vec<String> = Vec::new();
+         for perm in perms.iter() {
+            usr_perms.push(auth0_perms::Permissions::as_string(perm));
          }
 
-         if check_scopes.len() == 0 { return false; }
+         for is_claim in is_claims.iter() {
+            usr_perms.push(auth0_perms::IsClaims::as_string(is_claim));
+         }
 
          let req_perms = vec![
             auth0_perms::Permissions::MAILER_BASE_ACCESS.as_string(),
-            auth0_perms::IsClaims::SUDO_HIGH.as_string()
+            auth0_perms::IsClaims::SUDO_HIGH.as_string(),
          ];
          
          check_perms(
-            check_scopes.iter().map(|s| s.as_str()).collect(),
-            Some(PermCheckOptions::AtLeastOne(req_perms)),
+            &usr_perms,
+            Some(PermCheckOptions::AtLeastOne(&req_perms.iter().map(|p| p.as_str()).collect())),
             true, true
          )
       };
@@ -161,7 +159,7 @@ impl<'r> FromRequest<'r> for Auth {
          Ok(res) => {
             drop(jwks_vec);
             let auth_data = get_auth_data(&token, res);
-
+            
             if !has_min_perms(&auth_data) {
                Outcome::Failure((
                   HttpStatus::new(403), 
