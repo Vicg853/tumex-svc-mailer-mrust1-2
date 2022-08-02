@@ -11,36 +11,47 @@ command = "cargo check --all"
 ## Build profiles related tasks
 [tasks.build]
 description = "Production ready build"
-script = "fleet build --profile prod --out-dir ./build"
+env = { "CARGO_TARGET_DIR" = "./build" }
+script = "fleet build -- --profile release --out-dir ./build"
 
 [tasks.debug-build]
 description = "Production debug build"
-script = "fleet build --profile prod --out-dir ./build"
+env = { "CARGO_TARGET_DIR" = "./build" }
+script = "fleet build -- --profile release --out-dir ./build"
 
 #########################################################################################
 ## Runtime related tasks (both for development, production and debug)
 [tasks.start]
 description = "Start the server aftear a production build"
-script = "./target/debug/rust-mailer-api"
+script = "./build/rust-mailer-api"
 dependencies = ["build"]
 
 [tasks.start-no-build]
 description = "Start the server aftear a production build"
-script = "./target/debug/rust-mailer-api"
+script = "./build/rust-mailer-api"
 
 [tasks.dev]
 description = "Run the development command"
-script = "fleet run"
+script = "fleet run -- --profile dev --out-dir ./target/dev"
+env = { "RUST_BACKTRACE" = "1", "CARGO_TARGET_DIR" = "./target/dev" }
 env_files = [
    { path = ".env", profile = "development" }
 ]
 watch = { ignore_pattern = ".*", watch = [ "./src/", ".env"] }
 
+[tasks.dev-no-watch]
+description = "Run the development command without watcher"
+script = "fleet run -- --profile dev --out-dir ./target/dev"
+env = { "RUST_BACKTRACE" = "1", "CARGO_TARGET_DIR" = "./target/dev" }
+env_files = [
+   { path = ".env", profile = "development" }
+]
+
 #########################################################################################
 ## Debug related tasks
 [tasks.heaptrack-prod]
 description = "Run heaptrack on a production profile"
-script = "heaptrack ./target/debug/rust-mailer-api"
+script = "heaptrack ./build/rust-mailer-api"
 
 [tasks.tokio-console-prod]
 description = "Run tokio debug console"
@@ -49,7 +60,7 @@ script = "tokio-console"
 [tasks.dev-debug]
 
 [tasks.prod-debug]
-RUST_BACKTRACE = 1
+env = { "RUST_BACKTRACE" = "1" }
 env_files = [
    { path = ".env", profile = "development" }
 ]
