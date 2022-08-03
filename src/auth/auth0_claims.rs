@@ -99,14 +99,14 @@ pub mod auth0_perms {
    }
 
    pub fn check_perms(
-      usr_perms: &Vec<String>, 
-      req_perms: Option<PermCheckOptions>, 
-      check_min: bool, 
+      usr_perms: &Vec<String>,
+      req_perms: Option<PermCheckOptions>,
+      check_min: bool,
       check_tumex: bool) -> bool {
       let min_perm = "mailer:baseaccess";
       let is_tumex = "is:tumex";
       let mut min_perms_check = false;
-      
+
       if check_tumex || check_min {
          for perm in usr_perms.deref().iter() {
             if *perm == *min_perm && check_min {

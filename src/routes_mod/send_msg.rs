@@ -1,9 +1,9 @@
-use chrono::{Utc};
+use chrono::Utc;
 use regex::Regex;
-use mongodb::{bson::{doc, DateTime}};
+use mongodb::bson::{doc, DateTime};
 use rocket::{
     response::{content, status},
-    http::{Status as HttpStatus}, 
+    http::Status as HttpStatus, 
     State,
     warn,
     serde::{Deserialize, json::{Json, serde_json}}

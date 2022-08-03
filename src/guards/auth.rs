@@ -99,7 +99,6 @@ impl<'r> FromRequest<'r> for Auth {
             }
          };
          
-         info!("Verifying token with RSA verifier: Algo = {:?}", algo.id());
          match verifier.verify(token, &algo) {
             Ok(token_data) => Ok(token_data),
             Err(err) => {
