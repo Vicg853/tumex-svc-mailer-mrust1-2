@@ -3,7 +3,8 @@ use mongodb::{
    options::ClientOptions,
    Collection,
    Client,
-   self
+   self,
+   error::Error as MongoError,
 };
 
 use crate::models::message::Message;
@@ -11,6 +12,11 @@ use crate::models::message::Message;
 pub struct MessageCmsDb {
    client: Client,
    msg_col: Collection<Message>
+}
+
+pub enum ConnCheck {
+   Ok, 
+   Issue(MongoError)
 }
 
 impl MessageCmsDb {
@@ -50,5 +56,11 @@ impl MessageCmsDb {
    }
    pub fn get_msg_col(&self) -> &Collection<Message> {
       &self.msg_col
+   }
+   pub async fn check_conn(&self) -> ConnCheck {
+      match self.client.list_database_names(None, None).await {
+         Ok(_) => ConnCheck::Ok,
+         Err(err) => ConnCheck::Issue(err)
+      }
    }
 }
