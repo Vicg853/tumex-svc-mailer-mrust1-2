@@ -11,6 +11,107 @@ use crate::{
    guards::{Auth},
    auth::auth0_perms::{check_perms, Permissions, PermCheckOptions}
 };
+use msgs_filter_params::*;
+use get_msgs_filtering::{get_filter, FilterErr};
+
+mod get_msgs_filtering {
+   use std::str::FromStr;
+   use mongodb::bson::{Document, doc, DateTime as BsonDateTime, Bson};
+   use chrono::{DateTime, Utc};
+   use super::msgs_filter_params::*;
+   
+   #[derive(Debug)]
+   pub struct FilterErr {
+      pub msg: String,
+      pub unexpected: bool
+   }
+
+   pub fn get_filter(read_filter: Option<ReadFilter>, date_filter: Option<DateFilter>, archived_filter: Option<ArchivedFilter>, sender_filter: Option<SenderFilter>) -> Result<Document, FilterErr> {
+      let mut mongo_query_filters = Document::new();
+
+      if date_filter.is_some() {
+         let date_filter = date_filter.unwrap();
+         
+         if (date_filter.before.is_some() && date_filter.after.is_some()) 
+         || date_filter.within.is_some() && (date_filter.before.is_some() || date_filter.after.is_some()) {
+            return Err(FilterErr {
+               msg: "Only one of \"before\" or \"after\" or \"within\" can be specified".to_string(),
+               unexpected: false
+            });
+         }
+
+         let before_date_filter = date_filter.before.and_then(
+            |b| DateTime::from_str(&b)
+               .map_or_else(|e| {
+                  warn!("Failed parsing \"before\" date filter. Error: {:?}", e);
+                  Some(Err(FilterErr { msg: "Failed parsing \"before\" date filter.".to_owned(), unexpected: true }))
+               }, |d: DateTime<Utc>| Some(Ok(d)))
+         );
+
+         let after_date_filter = date_filter.after.and_then(
+            |b| DateTime::from_str(&b)
+               .map_or_else(|e| {
+                  warn!("Failed parsing \"after\" date filter. Error: {:?}", e);
+                  Some(Err(FilterErr { msg: "Failed parsing \"after\" date filter.".to_owned(), unexpected: true }))
+               }, |d: DateTime<Utc>| Some(Ok(d)))
+         );
+
+         let within_date_filter = date_filter.within.and_then(
+            |b| { 
+               let i_0 = DateTime::from_str(&b.0)
+               .map_or_else(|e| Err(e), |d: DateTime<Utc>| Ok(d));
+               let i_1 = DateTime::from_str(&b.1)
+               .map_or_else(|e| Err(e), |d: DateTime<Utc>| Ok(d));
+               if i_0.is_err() || i_1.is_err() {
+                  warn!("Failed parsing \"within\" date filter. \n Start {:?} \n End: {:?}", i_0.is_err(), i_1.is_err());
+                  Some(Err(FilterErr { msg: "Failed parsing \"within\" date filter.".to_owned(), unexpected: true }))
+               } else {
+                  Some(Ok((i_0.unwrap(), i_1.unwrap())))
+               }
+            }
+         );
+
+         match (before_date_filter, after_date_filter, within_date_filter) {
+            (Some(Err(e)), _, _) => return Err(e),
+            (_, Some(Err(e)), _) => return Err(e),
+            (_, _, Some(Err(e))) => return Err(e),
+            (Some(Ok(b)), _, _) => {
+               println!("{}", b.to_string());
+               mongo_query_filters.insert("createdAt", doc!{ "$lt": BsonDateTime::from_chrono(b) }); 
+            },
+            (_, Some(Ok(b)), _) => {
+               println!("{}", b.to_string());
+               mongo_query_filters.insert("createdAt", doc!{ "$gt": BsonDateTime::from_chrono(b) });
+            },
+            (_, _, Some(Ok((b, e)))) => {
+               println!("{}", b.to_string());
+               mongo_query_filters.insert("createdAt", doc!{ "$gte": BsonDateTime::from_chrono(b), "$lte": BsonDateTime::from_chrono(e) });
+            },
+            (_, _, _) => {}
+         }
+      }
+
+      if read_filter.is_some() {
+         let read_filter = read_filter.unwrap();
+         mongo_query_filters.insert("read", doc! { "$eq": read_filter.0 });
+      }
+      
+      if archived_filter.is_some() {
+         let archived_filter = archived_filter.unwrap();
+         mongo_query_filters.insert("read", doc! { "$eq": archived_filter.0 });
+      }
+
+      if sender_filter.is_some() {
+         let sender_filter = sender_filter.unwrap();
+         let bson_vec = Bson::from(sender_filter.0); 
+
+         mongo_query_filters.insert("from", doc! { "$in": bson_vec });
+      }
+
+      Ok(mongo_query_filters)
+   }
+}
+
 mod msgs_filter_params {
    #[derive(FromForm)]
    pub struct ReadFilter(pub bool);
