@@ -26,13 +26,11 @@ async fn rocket() -> _ {
         .manage(cms_db)
         .manage(pub_jwks)
         .mount("/", routes![
-            sd_msg_route,
-            
+            sd_msg_route
         ])
         .mount("/message", routes![
             gt_msg_route,
-        ])
-        .mount("/health", routes![
-            check_health_route,
+            get_msg_no_id_route,
+            get_msg_route
         ])
 }
