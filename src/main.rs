@@ -32,4 +32,7 @@ async fn rocket() -> _ {
         .mount("/message", routes![
             gt_msg_route,
         ])
+        .mount("/health", routes![
+            check_health_route,
+        ])
 }
