@@ -205,8 +205,6 @@ pub async fn get_msgs(cms_db: &State<MessageCmsDb>, auth: Auth,
                },
                Ok(msg) => msgs_res.push(json!({
                   "id": msg.id.unwrap().to_string(),
-                  "subject": msg.subject,
-                  "body": msg.message,
                   "sender": msg.name,
                   "email": msg.from,
                   "sent_at": msg.created_at.unwrap().to_chrono().to_rfc3339().to_string(),
