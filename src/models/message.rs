@@ -14,5 +14,6 @@ pub struct Message {
    pub name: String,
    pub subject: String,
    pub message: String,
-   pub read: bool
+   pub read: bool,
+   pub archived: bool
 }
