@@ -98,7 +98,7 @@ mod get_msgs_filtering {
       
       if archived_filter.is_some() {
          let archived_filter = archived_filter.unwrap();
-         mongo_query_filters.insert("read", doc! { "$eq": archived_filter.0 });
+         mongo_query_filters.insert("archived", doc! { "$eq": archived_filter.0 });
       }
 
       if sender_filter.is_some() {

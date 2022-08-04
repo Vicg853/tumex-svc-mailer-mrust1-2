@@ -71,7 +71,8 @@ pub async fn send_message(cms_db: &State<MessageCmsDb>, message: Json<NewMessage
         name: message.name,
         subject: message.subject,
         message: message.message,
-        read: false
+        read: false,
+        archived: false
     };
     
     match cms_db.get_msg_col().insert_one(msg_doc, None).await {
