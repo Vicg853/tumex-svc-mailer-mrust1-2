@@ -151,7 +151,30 @@ pub async fn get_msgs(cms_db: &State<MessageCmsDb>, auth: Auth,
       );
    }
 
-   match cms_db.get_msg_col().find(None, None).await {
+   let filter = get_filter(read, date, archived, sender);
+   if filter.is_err() {
+      match filter.unwrap_err() {
+         FilterErr { msg, unexpected: true } => {
+            return Custom(
+               HttpStatus::new(500), 
+               RawJson(json!({
+                  "error": msg
+               }).to_string())
+            );
+         }
+         FilterErr { msg, unexpected: false } => {
+            return Custom(
+               HttpStatus::new(400), 
+               RawJson(json!({
+                  "error": msg
+               }).to_string())
+            );
+         }
+      }
+   }
+   let filter = filter.unwrap();
+
+   match cms_db.get_msg_col().find(Some(filter), None).await {
       Err(err) => {
          warn!("Failed retrieving messages. Error: {:?}", err);
 
