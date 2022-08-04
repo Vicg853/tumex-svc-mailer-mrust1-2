@@ -11,9 +11,29 @@ use crate::{
    guards::{Auth},
    auth::auth0_perms::{check_perms, Permissions, PermCheckOptions}
 };
+mod msgs_filter_params {
+   #[derive(FromForm)]
+   pub struct ReadFilter(pub bool);
 
-#[get("/")]
-pub async fn get_msgs(cms_db: &State<MessageCmsDb>, auth: Auth) -> Custom<RawJson<String>> {
+   #[derive(FromForm)]
+   pub struct SenderFilter(pub Vec<String>);
+   
+   #[derive(FromForm)]
+   pub struct ArchivedFilter(pub bool);
+   
+   #[derive(FromForm)]
+   pub struct DateFilter {
+      pub before: Option<String>,
+      pub after: Option<String>,
+      pub within: Option<(String, String)>
+   }
+}
+
+#[get("/?<read>&<date>&<archived>&<sender>")]
+pub async fn get_msgs(cms_db: &State<MessageCmsDb>, auth: Auth, 
+   read: Option<ReadFilter>, date: Option<DateFilter>, archived: Option<ArchivedFilter>,
+   sender: Option<SenderFilter>
+) -> Custom<RawJson<String>> {
    let perms = auth.decoded_payload.raw_permissions
       .unwrap_or(vec![]);
    let req_perms = vec![Permissions::MAILER_WEBP_MSGS_READ.as_string()];
