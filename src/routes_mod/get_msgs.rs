@@ -76,15 +76,12 @@ mod get_msgs_filtering {
             (_, Some(Err(e)), _) => return Err(e),
             (_, _, Some(Err(e))) => return Err(e),
             (Some(Ok(b)), _, _) => {
-               println!("{}", b.to_string());
                mongo_query_filters.insert("createdAt", doc!{ "$lt": BsonDateTime::from_chrono(b) }); 
             },
             (_, Some(Ok(b)), _) => {
-               println!("{}", b.to_string());
                mongo_query_filters.insert("createdAt", doc!{ "$gt": BsonDateTime::from_chrono(b) });
             },
             (_, _, Some(Ok((b, e)))) => {
-               println!("{}", b.to_string());
                mongo_query_filters.insert("createdAt", doc!{ "$gte": BsonDateTime::from_chrono(b), "$lte": BsonDateTime::from_chrono(e) });
             },
             (_, _, _) => {}
@@ -142,7 +139,7 @@ pub async fn get_msgs(cms_db: &State<MessageCmsDb>, auth: Auth,
    if !check_perms(
       &perms, 
       Some(PermCheckOptions::All(&req_perms.iter().map(|p| p.as_str()).collect())),
-      false, false) {
+      false, true) {
       return Custom(
          HttpStatus::new(403), 
          RawJson(json!({

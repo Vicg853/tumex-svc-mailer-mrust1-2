@@ -109,7 +109,7 @@ pub mod auth0_perms {
 
       if check_tumex || check_min {
          for perm in usr_perms.deref().iter() {
-            if *perm == *min_perm && check_min {
+            if *perm == *min_perm {
                min_perms_check = true;
             }
             if *perm == *is_tumex && check_tumex {
@@ -117,11 +117,15 @@ pub mod auth0_perms {
             }
          }
       }
+      
+      if check_min && !min_perms_check {
+         return false;
+      }
 
       match req_perms {
          Some(PermCheckOptions::All(req_perms)) => {
             for perm in req_perms {
-               if usr_perms.contains(&perm.deref().to_owned()) {
+               if !usr_perms.contains(&perm.deref().to_owned()) {
                   return false;
                }
             }

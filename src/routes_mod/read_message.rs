@@ -31,8 +31,8 @@ pub async fn get_msg(db: &State<MessageCmsDb>, auth: Auth, id: String) -> Custom
 
    if !check_perms(
    auth.decoded_payload.raw_permissions.as_ref().unwrap(), 
-   Some(PermCheckOptions::All(&req_perms.iter().map(|p| p.as_str()).collect()))
-   , false, false) {
+   Some(PermCheckOptions::All(&req_perms.iter().map(|p| p.as_str()).collect())), 
+   false, true) {
       return Custom(
          HttpStatus::new(403),
          RawJson(json!({
