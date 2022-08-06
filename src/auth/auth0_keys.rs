@@ -150,4 +150,27 @@ impl PublicKeys {
          }
       }
    }
+   pub async fn safe_read_lock_exec<'guard, Res>(
+      &'guard self, 
+      f: impl FnOnce(&RwLockReadGuard<'guard, Vec<KeyComponents>>) -> Res
+   ) -> Res {
+      let lock = self.0.read().await;
+
+      let f_res = f(&lock);
+
+      drop(lock);
+      f_res
+   }
+
+   pub async fn safe_write_lock_exec<'guard, Res>(
+      &'guard self, 
+      f: impl FnOnce(&mut RwLockWriteGuard<'guard, Vec<KeyComponents>>) -> Res
+   ) -> Res {
+      let mut lock = self.0.write().await;
+
+      let f_res = f(&mut lock);
+
+      drop(lock);
+      f_res
+   }
 }
