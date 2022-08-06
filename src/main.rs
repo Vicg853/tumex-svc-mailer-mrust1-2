@@ -28,6 +28,9 @@ async fn rocket() -> _ {
         .mount("/", routes![
             sd_msg_route
         ])
+        .mount("/health", routes![
+            check_health_route
+        ])
         .mount("/message", routes![
             gt_msg_route,
             get_msg_no_id_route,
