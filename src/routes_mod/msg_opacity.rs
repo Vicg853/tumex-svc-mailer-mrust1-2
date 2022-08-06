@@ -17,9 +17,10 @@ use crate::{
    guards::Auth,
 };
 
-
-#[post("/toggle/<toggle_type>/<id>/<value>")]
-pub async fn toggle_read_archive(db: &State<MessageCmsDb>, auth: Auth, toggle_type: Option<String>, id: Option<String>, value: Option<bool>) -> Custom<RawJson<String>> {
+#[post("/toggle?<toggle_type>&<id>&<value>")]
+pub async fn toggle_read_archive(db: &State<MessageCmsDb>, auth: Auth, 
+   toggle_type: Option<String>, id: Option<String>, value: Option<bool>
+) -> Custom<RawJson<String>> {
    if toggle_type.is_none() || id.is_none() || value.is_none() {
       return Custom(
          HttpStatus::new(400),
@@ -123,15 +124,4 @@ pub async fn toggle_read_archive(db: &State<MessageCmsDb>, auth: Auth, toggle_ty
          )
       }
    }
-}
-
-
-#[post("/toggle")]
-pub async fn toggle_read_archive_empty() -> Custom<RawJson<String>> {
-   Custom(
-      HttpStatus::new(400),
-      RawJson(json!({
-         "error": "You must specify an message id and a toggle type (read or archive)"
-      }).to_string())
-   )
 }

@@ -4,10 +4,7 @@ mod health;
 mod read_message;
 mod msg_opacity;
 
-pub use msg_opacity::{
-   toggle_read_archive_empty as toggle_read_archive_empty_route,
-   toggle_read_archive as toggle_read_archive_route,
-};
+pub use msg_opacity::toggle_read_archive as toggle_read_archive_route;
 pub use read_message::{get_msg as get_msg_route, get_msg_no_id as get_msg_no_id_route};
 pub use health::check_health as check_health_route;
 pub use send_msg::send_message as sd_msg_route;

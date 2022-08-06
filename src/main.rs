@@ -35,7 +35,6 @@ async fn rocket() -> _ {
             gt_msg_route,
             get_msg_no_id_route,
             get_msg_route,
-            toggle_read_archive_empty_route,
             toggle_read_archive_route
         ])
 }
