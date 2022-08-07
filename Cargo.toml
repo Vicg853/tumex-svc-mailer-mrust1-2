@@ -20,4 +20,19 @@ console-subscriber = "0.1.6"
 
 [profile.release]
 strip = true
-lto = true
+lto = "fat"
+debug = 0
+opt-level = 3
+codegen-units = 1
+incremental = false
+
+[profile.dev]
+strip = false
+opt-level = 0
+debug = 2
+lto = false
+debug-assertions = true
+overflow-checks = true
+incremental = true
+codegen-units = 500
+panic = "abort"
