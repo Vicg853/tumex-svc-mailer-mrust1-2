@@ -8,11 +8,10 @@ use rocket::{
 use serde_json::json;
 
 use crate::{
-   auth::auth0_perms::{
-      PermCheckOptions,
-      Permissions,
-      check_perms
-   },
+   auth::{
+      auth0_token_related::PermCheckOpt,
+      auth0_perm_claims::ScopePerm,
+    },
    mongo::MessageCmsDb, 
    guards::Auth,
 };
@@ -33,12 +32,12 @@ pub async fn toggle_read_archive(db: &State<MessageCmsDb>, auth: Auth,
    let id = id.unwrap();
    let value = value.unwrap();
 
-   let mut req_perms = Vec::<String>::new();
+   let mut req_perms = Vec::<ScopePerm>::new();
 
    if toggle_type.eq("archive") {
-      req_perms.push(Permissions::MAILER_WEBP_MSGS_READ.as_string());
+      req_perms.push(ScopePerm::MAILER_WEBP_MSGS_READ);
    } else if toggle_type.eq("read") {
-      req_perms.push(Permissions::MAILER_WEBP_MSGS_READ.as_string());
+      req_perms.push(ScopePerm::MAILER_WEBP_MSGS_READ);
    } else {
       return Custom(
          HttpStatus::new(400),
@@ -47,27 +46,15 @@ pub async fn toggle_read_archive(db: &State<MessageCmsDb>, auth: Auth,
          }).to_string())
       );
    }
-   
-   if auth.decoded_payload.permissions.is_none() {
-      return Custom(
-         HttpStatus::new(403),
-         RawJson(json!({
-            "error": "Not authorized: no permissions for this token"
-         }).to_string())
-      )
-   }
-   
-   if !check_perms(
-      auth.decoded_payload.raw_permissions.as_ref().unwrap(), 
-      Some(PermCheckOptions::All(&req_perms.iter().map(|p| p.as_str()).collect())), 
-      false, true) {
-      return Custom(
-         HttpStatus::new(403),
-         RawJson(json!({
-            "error": "Unauthorized: You do not meet the requirements for to access this resource."
-         }).to_string())
-      )
-   }
+
+  if !auth.decoded_payload.check_perm(Some(PermCheckOpt::All(req_perms)), false, true) {
+    return Custom(
+      HttpStatus::new(403),
+      RawJson(json!({
+        "error": "Not authorized: insufficient permissions for this token"
+      }).to_string())
+    );
+  }
    
    let msg_oid = ObjectId::from_str(&id).or(Err(Custom(
       HttpStatus::new(400),

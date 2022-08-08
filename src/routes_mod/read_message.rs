@@ -11,35 +11,24 @@ use mongodb::bson::{doc, oid::ObjectId};
 use crate::{
    MessageCmsDb,
    guards::Auth,
-   auth::auth0_perms::{PermCheckOptions, check_perms, Permissions},
+   auth::{
+      auth0_token_related::PermCheckOpt,
+      auth0_perm_claims::ScopePerm,
+   },
 };
 
 #[get("/get/<id>")]
 pub async fn get_msg(db: &State<MessageCmsDb>, auth: Auth, id: String) -> Custom<RawJson<String>> {
-   let req_perms = vec![
-      Permissions::MAILER_WEBP_MSGS_READ.as_string(),
-   ];
+   let req_perms = vec![ ScopePerm::MAILER_WEBP_MSGS_READ ];
 
-   if auth.decoded_payload.permissions.is_none() {
-      return Custom(
-         HttpStatus::new(403),
-         RawJson(json!({
-            "error": "Not authorized: no permissions for this token"
-         }).to_string())
-      )
-   }
-
-   if !check_perms(
-   auth.decoded_payload.raw_permissions.as_ref().unwrap(), 
-   Some(PermCheckOptions::All(&req_perms.iter().map(|p| p.as_str()).collect())), 
-   false, true) {
-      return Custom(
-         HttpStatus::new(403),
-         RawJson(json!({
-            "error": "Unauthorized: You do not meet the requirements for to access this resource."
-         }).to_string())
-      )
-   }
+  if !auth.decoded_payload.check_perm(Some(PermCheckOpt::All(req_perms)), false, true) {
+    return Custom(
+      HttpStatus::new(403),
+      RawJson(json!({
+        "error": "Not authorized: insufficient permissions for this token"
+      }).to_string())
+    );
+  }
 
    let msg_oid = ObjectId::from_str(&id).or(Err(Custom(
       HttpStatus::new(400),

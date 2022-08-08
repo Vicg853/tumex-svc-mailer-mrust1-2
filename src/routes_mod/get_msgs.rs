@@ -7,9 +7,12 @@ use rocket::{
 use serde_json::Value as SerdeVal;
 
 use crate::{
+   auth::{
+      auth0_token_related::PermCheckOpt,
+      auth0_perm_claims::ScopePerm,
+   },
    mongo::MessageCmsDb,
    guards::{Auth},
-   auth::auth0_perms::{check_perms, Permissions, PermCheckOptions}
 };
 use msgs_filter_params::*;
 use get_msgs_filtering::{get_filter, FilterErr};
@@ -132,21 +135,16 @@ pub async fn get_msgs(cms_db: &State<MessageCmsDb>, auth: Auth,
    read: Option<ReadFilter>, date: Option<DateFilter>, archived: Option<ArchivedFilter>,
    sender: Option<SenderFilter>
 ) -> Custom<RawJson<String>> {
-   let perms = auth.decoded_payload.raw_permissions
-      .unwrap_or(vec![]);
-   let req_perms = vec![Permissions::MAILER_WEBP_MSGS_READ.as_string()];
+   let req_perms = vec![ ScopePerm::MAILER_WEBP_MSGS_READ ];
 
-   if !check_perms(
-      &perms, 
-      Some(PermCheckOptions::All(&req_perms.iter().map(|p| p.as_str()).collect())),
-      false, true) {
-      return Custom(
-         HttpStatus::new(403), 
-         RawJson(json!({
-            "error": "Yoy don't meet the required permissions!"
-         }).to_string())
-      );
-   }
+  if !auth.decoded_payload.check_perm(Some(PermCheckOpt::All(req_perms)), false, true) {
+    return Custom(
+      HttpStatus::new(403),
+      RawJson(json!({
+        "error": "Not authorized: insufficient permissions for this token"
+      }).to_string())
+    );
+  }
 
    let filter = get_filter(read, date, archived, sender);
    if filter.is_err() {

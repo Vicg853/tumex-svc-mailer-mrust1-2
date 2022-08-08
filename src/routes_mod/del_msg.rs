@@ -11,7 +11,10 @@ use rocket::{
 use regex::Regex;
 
 use crate::{
-  auth::auth0_perms::{check_perms, Permissions, PermCheckOptions},
+  auth::{
+    auth0_token_related::PermCheckOpt,
+    auth0_perm_claims::ScopePerm,
+  },
   guards::Auth,
   mongo::MessageCmsDb
 };
@@ -39,27 +42,9 @@ impl<'r> FromParam<'r> for Ids {
 
 #[post("/del/<ids>")]
 pub async fn del_msg(db: &State<MessageCmsDb>, auth: Auth, ids: Ids) -> Custom<RawJson<String>> {
-  let perms = auth.decoded_payload.raw_permissions;
+  let req_perms = vec![ ScopePerm::MAILER_WEBP_MSGS_DEL ];
 
-  if perms.is_none() {
-    return Custom(
-      HttpStatus::new(403),
-      RawJson(json!({
-        "error": "Not authorized: no permissions for this token"
-      }).to_string())
-    );
-  }
-
-  let req_perms = vec![
-    Permissions::MAILER_WEBP_MSGS_DEL.as_string()
-  ];
-
-  if !check_perms(
-    perms.unwrap().as_ref(), 
-    Some(PermCheckOptions::All(
-      &req_perms.iter().map(|p| p.as_str()).collect()
-    )), 
-    false, true) {
+  if !auth.decoded_payload.check_perm(Some(PermCheckOpt::All(req_perms)), false, true) {
     return Custom(
       HttpStatus::new(403),
       RawJson(json!({
