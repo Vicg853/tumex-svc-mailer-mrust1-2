@@ -7,10 +7,6 @@ pub mod auth0_perm_claims {
       fn from_perm_string(perms_string: &str) -> Option<Self>;
    }
 
-   pub struct RawRoles(pub Vec<String>);
-
-   pub struct RawPerms(pub Vec<String>);
-
    pub enum IsPerm {
       TUMEX,
       FRIENDS_NORMAL,
@@ -84,6 +80,7 @@ pub mod auth0_perm_claims {
    }
 
    impl IsPerm {
+      #[allow(dead_code)]
       pub fn as_str(&self) -> &str {
          match self {
             IsPerm::TUMEX => "is:tumex",
@@ -100,6 +97,7 @@ pub mod auth0_perm_claims {
    }
 
    impl ScopePerm {
+      #[allow(dead_code)]
       pub fn as_str(&self) -> &str {
          match self {
             ScopePerm::MAILER_BASE_ACCESS => "mailer:baseaccess",
@@ -157,183 +155,26 @@ pub mod auth0_perm_claims {
    }
 
    impl IsPermVec {
+      #[allow(dead_code)]
       pub fn as_string_vec(&self) -> Vec<String> {
          self.0.iter().map(|p| p.to_string()).collect::<Vec<String>>()
       }
    }
 
    impl ScopePermVec {
+      #[allow(dead_code)]
       pub fn as_string_vec(&self) -> Vec<String> {
          self.0.iter().map(|p| p.to_string()).collect::<Vec<String>>()
       }
    }
 }
 
-pub mod auth0_token {
-
-}
-
-pub mod auth0_perms {
-    use std::ops::Deref;
-
-   pub trait ClaimsToEnumConstructors where Self: Sized {
-      fn from_perms(_perms: &Vec<String>) -> Vec<Self> { Vec::new() }
-   }
-
-   #[derive(Eq, PartialEq, Debug)]
-   pub enum IsClaims {
-      TUMEX,
-      FRIENDS_NORMAL,
-      FRIENDS_CLOSE,
-      FRIENDS_BFF,
-      FAMILY_FIRST,
-      FAMILY_SECOND,
-      FAMILY_THIRD,
-      SUDO_LOW,
-      SUDO_HIGH,
-   }
-   
-
-   impl IsClaims {
-       pub fn as_string(&self) -> String {
-         match self {
-            IsClaims::TUMEX => "is:tumex".to_owned(),
-            IsClaims::FRIENDS_NORMAL => "is:friends:normal".to_owned(),
-            IsClaims::FRIENDS_CLOSE => "is:friends:close".to_owned(),
-            IsClaims::FRIENDS_BFF => "is:friends:bff".to_owned(),
-            IsClaims::FAMILY_FIRST => "is:family:first-deg".to_owned(),
-            IsClaims::FAMILY_SECOND => "is:family:second-deg".to_owned(),
-            IsClaims::FAMILY_THIRD => "is:family:third-deg".to_owned(),
-            IsClaims::SUDO_LOW => "is:sudo:low".to_owned(),
-            IsClaims::SUDO_HIGH => "is:sudo:high".to_owned()
-         }
-      }
-
-   }
-   impl ClaimsToEnumConstructors for IsClaims {
-      fn from_perms(perms: &Vec<String>) -> Vec<Self>  {
-         let mut claims: Vec<IsClaims> = Vec::new();
-
-         for perm in perms { 
-            match perm.as_str() {
-               "is:tumex" => claims.push(IsClaims::TUMEX),
-               "is:friends:normal" => claims.push(IsClaims::FRIENDS_NORMAL),
-               "is:friends:close" => claims.push(IsClaims::FRIENDS_CLOSE),
-               "is:friends:bff" => claims.push(IsClaims::FRIENDS_BFF),
-               "is:family:first-deg" => claims.push(IsClaims::FAMILY_FIRST),
-               "is:family:second-deg" => claims.push(IsClaims::FAMILY_SECOND),
-               "is:family:third-deg" => claims.push(IsClaims::FAMILY_THIRD),
-               "is:sudo:low" => claims.push(IsClaims::SUDO_LOW),
-               "is:sudo:high" => claims.push(IsClaims::SUDO_HIGH),
-               _ => {}
-            }
-         }
-         claims
-      }
-   }
-   
-   #[derive(Eq, PartialEq, Debug)]
-   pub enum Permissions {
-      MAILER_BASE_ACCESS,
-      MAILER_WEBP_MSGS_READ,
-      MAILER_WEBP_MSGS_DEL
-   }
-   
-   impl Permissions {
-      pub fn as_string(&self) -> String {
-         match self {
-            Permissions::MAILER_BASE_ACCESS => "mailers:baseaccess".to_owned(),
-            Permissions::MAILER_WEBP_MSGS_READ => "mailer:webp:messages:read".to_owned(),
-            Permissions::MAILER_WEBP_MSGS_DEL => "mailer:webp:messages:delete".to_owned()
-         }
-      }
-   }
-   
-   impl ClaimsToEnumConstructors for Permissions {
-      fn from_perms(perms: &Vec<String>) -> Vec<Self>  {
-         let mut claims: Vec<Permissions> = Vec::new();
-         
-         for perm in perms {
-            match perm.as_str() {
-               "mailer:baseaccess" => claims.push(Permissions::MAILER_BASE_ACCESS),
-               "mailer:webp:messages:read" => claims.push(Permissions::MAILER_WEBP_MSGS_READ),
-               "mailer:webp:messages:delete" => claims.push(Permissions::MAILER_WEBP_MSGS_DEL),
-               _ => {}
-            }
-         }
-         claims
-      }
-   }
-
-   pub enum PermCheckOptions<'a>{
-      AtLeastOne(&'a Vec<&'a str>),
-      All(&'a Vec<&'a str>),
-      None(&'a Vec<&'a str>)
-   }
-
-   pub fn check_perms(
-      usr_perms: &Vec<String>,
-      req_perms: Option<PermCheckOptions>,
-      check_min: bool,
-      check_tumex: bool) -> bool {
-      let min_perm = "mailer:baseaccess";
-      let is_tumex = "is:tumex";
-      let mut min_perms_check = false;
-
-      if check_tumex || check_min {
-         for perm in usr_perms.deref().iter() {
-            if *perm == *min_perm {
-               min_perms_check = true;
-            }
-            if *perm == *is_tumex && check_tumex {
-               return true;
-            }
-         }
-      }
-      
-      if check_min && !min_perms_check {
-         return false;
-      }
-
-      match req_perms {
-         Some(PermCheckOptions::All(req_perms)) => {
-            for perm in req_perms {
-               if !usr_perms.contains(&perm.deref().to_owned()) {
-                  return false;
-               }
-            }
-
-            return true;
-         },
-         Some(PermCheckOptions::AtLeastOne(req_perms) ) => {
-            for perm in req_perms {
-               if usr_perms.contains(&perm.deref().to_owned()) {
-                  return true;
-               }
-            }
-
-            return false;
-         },
-         Some(PermCheckOptions::None(req_perms) ) => {
-            for perm in req_perms {
-               if usr_perms.contains(&perm.deref().to_owned()) {
-                  return false;
-               }
-            }
-
-            return true;
-         },
-         _ => min_perms_check
-      }
-   }
-}
-
-
 pub mod auth0_token_related {
    use serde_json::Value;
-   use super::{
-      auth0_perms::*,
-      auth0_perm_claims::NewAuth0Perms
+   use super::auth0_perm_claims::{
+      NewAuth0Perms,
+      IsPermVec,
+      ScopePermVec
    };
 
    pub struct AudienceIdentifier(pub String);
@@ -348,9 +189,9 @@ pub mod auth0_token_related {
       pub exp: Option<u64>,
       pub iat: Option<u64>,
       pub scope: Option<Vec<String>>,
-      pub permissions: Option<Vec<Permissions>>,
+      pub permissions: Option<ScopePermVec>,
       pub raw_permissions: Option<Vec<String>>,
-      pub is_claims: Option<Vec<IsClaims>>,
+      pub is_claims: Option<IsPermVec>,
       pub role: Option<Vec<String>>,
    }
 
@@ -385,27 +226,25 @@ pub mod auth0_token_related {
             ),
             permissions: token.get("permissions").and_then(|perms| {
                let iterable = perms.as_array();
-               let mut res: Option<Vec<Permissions>> = None;                  
+               let mut res: Option<ScopePermVec> = None;                  
             
                if iterable.is_none() {
-                  let iterable: &Vec<String> = &perms.to_string()
+                  let iterable = perms.to_string()
                      .split(" ")
-                     .map(|perm| perm.to_string())
-                     .collect();
+                     .collect::<Vec<&str>>()
+                     .join(",");
 
                   if iterable.len() > 0 {
-                     res = Some(Permissions::from_perms(iterable));
+                     res = ScopePermVec::from_perm_string(&iterable);
                   }
                } else {
-                  res = Some(Permissions::from_perms(
-                     iterable.unwrap()
+                  res = ScopePermVec::from_perm_string(
+                     &iterable.unwrap()
                         .iter()
-                        .map(|perm| perm.as_str())
-                        .filter(|perm| perm.is_some())
-                        .map(|perm| perm.unwrap().to_string())
+                        .map(|perm| perm.to_string())
                         .collect::<Vec<String>>()
-                        .as_ref()
-                  ));
+                        .join(",")
+                  );
                }
              
                res
@@ -441,26 +280,24 @@ pub mod auth0_token_related {
                let mut res = None;
 
                if iterable.is_none() {
-                  let iterable: &Vec<String> = &perms.to_string()
+                  let iterable = perms.to_string()
                      .split(" ")
-                     .map(|perm| perm.to_string())
-                     .collect();
+                     .collect::<Vec<&str>>()
+                     .join(",");
 
                   if iterable.len() > 0 {
-                     res = Some(IsClaims::from_perms(iterable));
+                     res = IsPermVec::from_perm_string(&iterable);
                   }
                } else {
-                  res = Some(IsClaims::from_perms(
-                     iterable.unwrap()
+                  res = IsPermVec::from_perm_string(
+                     &iterable.unwrap()
                         .iter()
-                        .map(|perm| perm.as_str())
-                        .filter(|perm| perm.is_some())
-                        .map(|perm| perm.unwrap().to_string())
+                        .map(|perm| perm.to_string())
                         .collect::<Vec<String>>()
-                        .as_ref()
-                  ));
+                        .join(",")
+                  );
                }
-               
+
                res
             }),
             role: token.get("role").and_then(|role| 
