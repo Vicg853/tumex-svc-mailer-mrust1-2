@@ -68,7 +68,7 @@ pub async fn del_msg(db: &State<MessageCmsDb>, auth: Auth, ids: Ids) -> Custom<R
     );
   }
   
-  let mut oids_vec = ids.0.iter()
+  let oids_vec = ids.0.iter()
     .map(|id| ObjectId::from_str(id).to_owned());
 
   let mut oids = Vec::<ObjectId>::new();
@@ -86,7 +86,7 @@ pub async fn del_msg(db: &State<MessageCmsDb>, auth: Auth, ids: Ids) -> Custom<R
   }
 
   let oids = Bson::from_iter(oids);
-  
+
   let delete_filter = doc! {
     "_id": {
       "$in": oids
