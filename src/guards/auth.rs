@@ -13,8 +13,8 @@ use rocket::{
 
 use crate::auth::{
    auth0_key_components::{Exponent, Modulus},
-   auth0_token_related::{Auth0TokenFields},
-   auth0_perms::{self, check_perms, PermCheckOptions},
+   auth0_token_related::{Auth0TokenFields, PermCheckOpt},
+   auth0_perm_claims::{IsPerm, ScopePerm},
    PublicKeys
 };
 
@@ -119,34 +119,20 @@ impl<'r> FromRequest<'r> for Auth {
       };
 
       let has_min_perms = |auth_data: &Auth| -> bool {
-         let perms = &auth_data.decoded_payload.permissions;
-         let is_claims = &auth_data.decoded_payload.is_claims;
-         if is_claims.is_none() && perms.is_none() {
-            return false;
-         }
-
-         let is_claims = auth_data.decoded_payload.is_claims.as_ref().unwrap();
-         let perms = auth_data.decoded_payload.permissions.as_ref().unwrap();
-
-         let mut usr_perms: Vec<String> = Vec::new();
-         for perm in perms.iter() {
-            usr_perms.push(auth0_perms::Permissions::as_string(perm));
-         }
-
-         for is_claim in is_claims.iter() {
-            usr_perms.push(auth0_perms::IsClaims::as_string(is_claim));
-         }
-
-         let req_perms = vec![
-            auth0_perms::Permissions::MAILER_BASE_ACCESS.as_string(),
-            auth0_perms::IsClaims::SUDO_HIGH.as_string(),
-         ];
+         let req_perms = vec![ IsPerm::SUDO_HIGH ];
          
-         check_perms(
-            &usr_perms,
-            Some(PermCheckOptions::AtLeastOne(&req_perms.iter().map(|p| p.as_str()).collect())),
+         let is_check = auth_data.decoded_payload.check_perm(
+            Some(PermCheckOpt::All(req_perms)),
             true, true
-         )
+         );
+         
+         let req_perms = vec![ ScopePerm::MAILER_BASE_ACCESS ];
+         let scope_check = auth_data.decoded_payload.check_perm(
+            Some(PermCheckOpt::All(req_perms)),
+            true, true
+         );
+
+         is_check || scope_check
       };
       
 
