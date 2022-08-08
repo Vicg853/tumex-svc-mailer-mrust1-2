@@ -3,7 +3,9 @@ mod get_msgs;
 mod health;
 mod read_message;
 mod msg_opacity;
+mod del_msg;
 
+pub use del_msg::{del_msg as del_msg_route, del_msg_no_id as del_msg_no_id_route};
 pub use msg_opacity::toggle_read_archive as toggle_read_archive_route;
 pub use read_message::{get_msg as get_msg_route, get_msg_no_id as get_msg_no_id_route};
 pub use health::check_health as check_health_route;
