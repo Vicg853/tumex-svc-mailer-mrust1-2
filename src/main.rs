@@ -1,5 +1,7 @@
 #![feature(async_closure, if_let_guard)]
 #[macro_use] extern crate rocket;
+
+#[cfg(debug_assertions)]
 use console_subscriber;
 
 mod models;
@@ -16,6 +18,7 @@ use auth::PublicKeys;
 
 #[launch]
 async fn rocket() -> _ {
+    #[cfg(debug_assertions)]
     console_subscriber::init();
     
     rocket::build()
