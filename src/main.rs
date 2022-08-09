@@ -2,13 +2,14 @@
 #[macro_use] extern crate rocket;
 use console_subscriber;
 
-
 mod models;
 mod mongo;
 mod routes_mod;
 mod guards;
 mod auth;
+mod fairings;
 
+use rocket::fairing::AdHoc;
 use mongo::MessageCmsDb;
 use routes_mod::*;
 use auth::PublicKeys;
@@ -16,15 +17,20 @@ use auth::PublicKeys;
 #[launch]
 async fn rocket() -> _ {
     console_subscriber::init();
-
-    let cms_db = MessageCmsDb::init().await;
-    let pub_jwks = PublicKeys::new().await
-        .expect("Failed starting auth0 public jwk set fetcher!");
-
-
+    
     rocket::build()
-        .manage(cms_db)
-        .manage(pub_jwks)
+        .attach(AdHoc::try_on_ignite("Message CMS DB Connection", |rocket_build| async {
+            Ok(rocket_build.manage(MessageCmsDb::init().await))
+        }))
+        .attach(AdHoc::try_on_ignite("Auth0 Public JWKS", |rocket_build| async {
+            match PublicKeys::new().await {
+                Ok(state) => Ok(rocket_build.manage(state)),
+                Err(e) => {
+                    error!("Failed to load Auth0 public keys: {}", e);
+                    Err(rocket_build)
+                }
+            }
+        }))
         .mount("/", routes![
             sd_msg_route
         ])
