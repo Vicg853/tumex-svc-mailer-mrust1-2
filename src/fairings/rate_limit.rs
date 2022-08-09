@@ -18,14 +18,15 @@ mod state {
    pub struct RateLimitState{
       clients: Vec<ClientRecord>,
       limit: RateType,
-
+      reset_timeout: DateTime<Utc>
    }
 
    impl RateLimitState {
-      pub fn new(rate: RateType) -> Self {
+      pub fn new(rate: RateType, reset_timeout: DateTime<Utc>) -> Self {
          Self {
             clients: Vec::new(),
-            limit: rate
+            limit: rate,
+            reset_timeout
          }
       }
 
@@ -86,7 +87,7 @@ mod state {
             PerSecond(limit) => {
                let smaller_than = diff.num_seconds() <= 1;
                if !smaller_than {
-                  should_rst = true;6
+                  should_rst = true;
                } else if smaller_than && client.count >= limit {
                   return false;
                }
@@ -124,12 +125,22 @@ mod state {
          true
       }
 
-      pub fn full_run(self, ip: String) -> (Self, bool) {
+      pub fn passed_reset_timeout(&self, client: &ClientRecord) -> bool {
+         (Utc::now().timestamp() - client.last_request.timestamp()) > self.reset_timeout.timestamp()
+      }
+
+      pub fn full_check_on_the_limit(self, ip: String) -> (Self, bool) {
          self.add_client(ip);
          let client = self.get_client(&ip).unwrap();
 
          let on_the_limit = self.on_the_limit(client);
-         (self, on_the_limit)
+
+         if self.passed_reset_timeout(client) {
+            self.reset_client(&ip);
+            (self, true)
+         } else {
+            (self, on_the_limit)
+         }
       }
    }
 
@@ -137,13 +148,15 @@ mod state {
    pub struct ServerLimit{
       limit: RateType,
       current_count: u32,
-      last_reset: DateTime<Utc>
+      last_reset: DateTime<Utc>,
+      reset_timeout: DateTime<Utc>,
    }
 
    impl ServerLimit {
-      pub fn new(limit: RateType) -> Self {
+      pub fn new(limit: RateType, reset_timeout: DateTime<Utc>) -> Self {
          Self {
             limit,
+            reset_timeout,
             current_count: 0,
             last_reset: Utc::now()
          }
@@ -161,6 +174,11 @@ mod state {
       pub fn check(&self) -> bool {
          let now = Utc::now();
          let diff = now - self.last_reset;
+
+         if (&now.timestamp() - self.last_reset.timestamp()) > self.reset_timeout.timestamp() {
+            self.reset();
+            return true;
+         }
 
          use RateType::*;
          match self.limit {
@@ -191,5 +209,16 @@ mod state {
 
          true
       }
+   }
+}
+
+mod guard {
+   use rocket::{Request, Data, futures::future::BoxFuture};
+   
+   
+   pub fn rate_limiter<'a>(req: &'a Request<'_>, data: &'a Data<'_>) -> BoxFuture<'a, ()> {
+      Box::pin(async move {
+         
+      })
    }
 }
