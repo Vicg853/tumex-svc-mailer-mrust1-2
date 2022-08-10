@@ -9,7 +9,7 @@ mod mongo;
 mod routes_mod;
 mod guards;
 mod auth;
-mod fairings;
+mod security;
 
 use rocket::fairing::AdHoc;
 use mongo::MessageCmsDb;
