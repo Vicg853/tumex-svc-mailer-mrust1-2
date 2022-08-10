@@ -1,4 +1,4 @@
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Utc, Duration};
 
 pub struct ClientRecord {
     ip: String,
@@ -17,11 +17,11 @@ pub enum RateType {
 pub struct RateLimitState {
     clients: Vec<ClientRecord>,
     limit: RateType,
-    reset_timeout: DateTime<Utc>,
+    reset_timeout: Duration,
 }
 
 impl RateLimitState {
-    pub fn new(rate: RateType, reset_timeout: DateTime<Utc>) -> Self {
+    pub fn new(rate: RateType, reset_timeout: Duration) -> Self {
         Self {
             clients: Vec::new(),
             limit: rate,
@@ -137,7 +137,7 @@ impl RateLimitState {
         }
         let client = client.unwrap();
 
-        (Utc::now().timestamp() - client.last_request.timestamp()) > self.reset_timeout.timestamp()
+        Utc::now().signed_duration_since(client.last_request) > self.reset_timeout
     }
 
     pub fn full_check_on_the_limit(&mut self, ip: String) -> bool {
@@ -158,11 +158,11 @@ pub struct ServerLimit {
     limit: RateType,
     current_count: u32,
     last_reset: DateTime<Utc>,
-    reset_timeout: DateTime<Utc>,
+    reset_timeout: Duration,
 }
 
 impl ServerLimit {
-    pub fn new(limit: RateType, reset_timeout: DateTime<Utc>) -> Self {
+    pub fn new(limit: RateType, reset_timeout: Duration) -> Self {
         Self {
             limit,
             reset_timeout,
@@ -184,7 +184,7 @@ impl ServerLimit {
         let now = Utc::now();
         let diff = now - self.last_reset;
 
-        if (&now.timestamp() - self.last_reset.timestamp()) > self.reset_timeout.timestamp() {
+        if now.signed_duration_since(self.last_reset) > self.reset_timeout {
             self.reset();
             return true;
         }
