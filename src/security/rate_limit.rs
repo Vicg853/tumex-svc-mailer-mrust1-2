@@ -1,4 +1,6 @@
-use chrono::{DateTime, Utc, Duration};
+use core::asserting::Printable;
+
+use chrono::{DateTime, Duration, Utc};
 
 pub struct ClientRecord {
     ip: String,
@@ -30,26 +32,22 @@ impl RateLimitState {
     }
 
     pub fn add_client(&mut self, ip: String) {
-        let mut found = false;
         let now = Utc::now();
 
         for client in self.clients.iter_mut() {
             if client.ip == ip {
                 client.count += 1;
                 client.last_request = now;
-                found = true;
                 return;
             }
         }
 
-        if !found {
-            self.clients.push(ClientRecord {
-                ip,
-                count: 1,
-                last_request: now,
-                first_request: now,
-            });
-        }
+        self.clients.push(ClientRecord {
+            ip,
+            count: 1,
+            last_request: now,
+            first_request: now,
+        });
     }
 
     fn get_client(&self, ip: &str) -> Option<&ClientRecord> {
@@ -137,20 +135,18 @@ impl RateLimitState {
         }
         let client = client.unwrap();
 
-        Utc::now().signed_duration_since(client.last_request) > self.reset_timeout
+        (Utc::now().timestamp() - client.last_request.timestamp())
+            > self.reset_timeout.num_seconds()
     }
 
     pub fn full_check_on_the_limit(&mut self, ip: String) -> bool {
-        self.add_client(ip.clone());
-
-        let on_the_limit = self.on_the_limit(&ip);
-
         if self.passed_reset_timeout(&ip) {
             self.reset_client(&ip);
-            true
-        } else {
-            on_the_limit
+            return true;
         }
+
+        self.add_client(ip.clone());
+        self.on_the_limit(&ip)
     }
 }
 
