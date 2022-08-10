@@ -1,6 +1,9 @@
 #![feature(async_closure, if_let_guard)]
 #[macro_use] extern crate rocket;
 
+use std::str::FromStr;
+use tokio::sync::RwLock;
+
 #[cfg(debug_assertions)]
 use console_subscriber;
 
@@ -12,9 +15,12 @@ mod auth;
 mod security;
 
 use rocket::fairing::AdHoc;
+use chrono::Utc;
 use mongo::MessageCmsDb;
 use routes_mod::*;
 use auth::PublicKeys;
+use guards::{PerMinRateLimit, rate_limiter};
+use security::{RateType, RateLimitState};
 
 #[launch]
 async fn rocket() -> _ {
@@ -34,6 +40,15 @@ async fn rocket() -> _ {
                 }
             }
         }))
+        .attach(AdHoc::try_on_ignite("Per minute rate limit state handler", |rocket_build| async {
+            let state_wrapper = PerMinRateLimit(RwLock::new(RateLimitState::new(
+                RateType::PerMinute(20), 
+                Utc::now()
+            )));
+            
+            Ok(rocket_build.manage(state_wrapper))
+        }))
+        .attach(AdHoc::on_request("Per minute rate limit handler", rate_limiter))
         .mount("/", routes![
             sd_msg_route
         ])
