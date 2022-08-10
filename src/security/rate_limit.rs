@@ -1,6 +1,6 @@
 use chrono::{DateTime, Utc};
 
-struct ClientRecord {
+pub struct ClientRecord {
     ip: String,
     count: u32,
     last_request: DateTime<Utc>,
@@ -52,7 +52,7 @@ impl RateLimitState {
         }
     }
 
-    pub fn get_client(&self, ip: &str) -> Option<&ClientRecord> {
+    fn get_client(&self, ip: &str) -> Option<&ClientRecord> {
         for client in self.clients.iter() {
             if client.ip == ip {
                 return Some(client);
@@ -62,20 +62,26 @@ impl RateLimitState {
         None
     }
 
-    pub fn reset_client(&mut self, ip: &str) -> Option<&ClientRecord> {
+    pub fn reset_client<'s>(&'s mut self, ip: &str) -> Option<&'s ClientRecord> {
         for client in self.clients.iter_mut() {
             if client.ip == ip {
                 client.count = 0;
                 client.last_request = Utc::now();
                 client.first_request = Utc::now();
-                return Some(&client);
+                return Some(client);
             }
         }
 
         None
     }
 
-    pub fn on_the_limit(&mut self, client: &ClientRecord) -> bool {
+    pub fn on_the_limit(&mut self, ip: &str) -> bool {
+        let client = self.get_client(ip);
+        if client.is_none() {
+            return false;
+        }
+        let client = client.unwrap();
+
         let now = Utc::now();
         let diff = now - client.last_request;
 
@@ -118,27 +124,32 @@ impl RateLimitState {
         }
 
         if should_rst {
-            self.reset_client(&client.ip);
+            self.reset_client(&client.ip.clone());
         }
 
         true
     }
 
-    pub fn passed_reset_timeout(&self, client: &ClientRecord) -> bool {
+    pub fn passed_reset_timeout(&self, ip: &str) -> bool {
+        let client = self.get_client(ip);
+        if client.is_none() {
+            return false;
+        }
+        let client = client.unwrap();
+
         (Utc::now().timestamp() - client.last_request.timestamp()) > self.reset_timeout.timestamp()
     }
 
-    pub fn full_check_on_the_limit(self, ip: String) -> (Self, bool) {
-        self.add_client(ip);
-        let client = self.get_client(&ip).unwrap();
+    pub fn full_check_on_the_limit(&mut self, ip: String) -> bool {
+        self.add_client(ip.clone());
 
-        let on_the_limit = self.on_the_limit(client);
+        let on_the_limit = self.on_the_limit(&ip);
 
-        if self.passed_reset_timeout(client) {
+        if self.passed_reset_timeout(&ip) {
             self.reset_client(&ip);
-            (self, true)
+            true
         } else {
-            (self, on_the_limit)
+            on_the_limit
         }
     }
 }
@@ -169,7 +180,7 @@ impl ServerLimit {
         self.current_count += 1;
     }
 
-    pub fn check(&self) -> bool {
+    pub fn check(&mut self) -> bool {
         let now = Utc::now();
         let diff = now - self.last_reset;
 
