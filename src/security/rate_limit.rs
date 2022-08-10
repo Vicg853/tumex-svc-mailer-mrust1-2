@@ -1,5 +1,3 @@
-use core::asserting::Printable;
-
 use chrono::{DateTime, Duration, Utc};
 
 pub struct ClientRecord {
@@ -9,11 +7,12 @@ pub struct ClientRecord {
     first_request: DateTime<Utc>,
 }
 
-pub enum RateType {
-    PerSecond(u32),
-    PerMinute(u32),
-    PerHour(u32),
-    PerDay(u32),
+pub struct RateType(Duration, u32);
+
+impl RateType {
+    pub fn new(duration: Duration, req_limit: u32) -> Self {
+        Self(duration, req_limit)
+    }
 }
 
 pub struct RateLimitState {
@@ -80,52 +79,13 @@ impl RateLimitState {
         }
         let client = client.unwrap();
 
-        let now = Utc::now();
-        let diff = now - client.last_request;
-
-        let mut should_rst = false;
-
-        use RateType::*;
-        match self.limit {
-            PerSecond(limit) => {
-                let smaller_than = diff.num_seconds() <= 1;
-                if !smaller_than {
-                    should_rst = true;
-                } else if smaller_than && client.count >= limit {
-                    return false;
-                }
-            }
-            PerMinute(limit) => {
-                let smaller_than = diff.num_minutes() <= 1;
-                if !smaller_than {
-                    should_rst = true;
-                } else if smaller_than && client.count >= limit {
-                    return false;
-                }
-            }
-            PerHour(limit) => {
-                let smaller_than = diff.num_hours() <= 1;
-                if !smaller_than {
-                    should_rst = true;
-                } else if smaller_than && client.count >= limit {
-                    return false;
-                }
-            }
-            PerDay(limit) => {
-                let smaller_than = diff.num_days() <= 1;
-                if !smaller_than {
-                    should_rst = true;
-                } else if smaller_than && client.count >= limit {
-                    return false;
-                }
-            }
+        if (Utc::now().timestamp() - client.last_request.timestamp()) <= self.limit.0.num_seconds()
+            && client.count >= self.limit.1
+        {
+            false
+        } else {
+            true
         }
-
-        if should_rst {
-            self.reset_client(&client.ip.clone());
-        }
-
-        true
     }
 
     pub fn passed_reset_timeout(&self, ip: &str) -> bool {
@@ -178,40 +138,17 @@ impl ServerLimit {
 
     pub fn check(&mut self) -> bool {
         let now = Utc::now();
-        let diff = now - self.last_reset;
+        let diff = now.timestamp() - self.last_reset.timestamp();
 
-        if now.signed_duration_since(self.last_reset) > self.reset_timeout {
+        if diff > self.reset_timeout.num_seconds() {
             self.reset();
             return true;
         }
 
-        use RateType::*;
-        match self.limit {
-            PerSecond(limit) => {
-                if diff.num_seconds() <= 1 && self.current_count >= limit {
-                    return false;
-                }
-            }
-            PerMinute(limit) => {
-                if diff.num_minutes() > 1 && self.current_count > limit {
-                    self.reset();
-                    return false;
-                }
-            }
-            PerHour(limit) => {
-                if diff.num_hours() > 1 && self.current_count > limit {
-                    self.reset();
-                    return false;
-                }
-            }
-            PerDay(limit) => {
-                if diff.num_days() > 1 && self.current_count > limit {
-                    self.reset();
-                    return false;
-                }
-            }
+        if diff < self.limit.0.num_seconds() && self.current_count >= self.limit.1 {
+            false
+        } else {
+            true
         }
-
-        true
     }
 }
