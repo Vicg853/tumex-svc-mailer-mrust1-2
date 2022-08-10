@@ -9,22 +9,22 @@ command = "cargo check --all"
 
 #########################################################################################
 ## Build profiles related tasks
-[tasks.build]
+[tasks.prod-build]
 description = "Production ready build"
 env = { "CARGO_TARGET_DIR" = "./build" }
-script = "fleet build -- --profile release --out-dir ./build"
+script = "fleet build --profile release -Z unstable-options --out-dir ./build"
 
 [tasks.debug-build]
 description = "Production debug build"
-env = { "CARGO_TARGET_DIR" = "./build" }
-script = "fleet build -- --profile release --out-dir ./build"
+env = { "CARGO_TARGET_DIR" = "./build-debug" }
+script = "fleet build --profile release -Z unstable-options --out-dir ./build-debug"
 
 #########################################################################################
 ## Runtime related tasks (both for development, production and debug)
 [tasks.start]
 description = "Start the server aftear a production build"
 script = "./build/rust-mailer-api"
-dependencies = ["build"]
+dependencies = ["prod-build"]
 
 [tasks.start-no-build]
 description = "Start the server aftear a production build"
