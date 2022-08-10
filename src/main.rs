@@ -15,7 +15,7 @@ mod auth;
 mod security;
 
 use rocket::fairing::AdHoc;
-use chrono::Utc;
+use chrono::Duration;
 use mongo::MessageCmsDb;
 use routes_mod::*;
 use auth::PublicKeys;
@@ -43,7 +43,7 @@ async fn rocket() -> _ {
         .attach(AdHoc::try_on_ignite("Per minute rate limit state handler", |rocket_build| async {
             let state_wrapper = PerMinRateLimit(RwLock::new(RateLimitState::new(
                 RateType::PerMinute(20), 
-                Utc::now()
+                Duration::minutes(1)
             )));
             
             Ok(rocket_build.manage(state_wrapper))
