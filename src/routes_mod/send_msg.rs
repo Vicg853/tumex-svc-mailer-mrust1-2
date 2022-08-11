@@ -1,3 +1,4 @@
+use unicode_segmentation::UnicodeSegmentation;
 use chrono::Utc;
 use regex::Regex;
 use mongodb::bson::{doc, DateTime};
@@ -11,10 +12,11 @@ use rocket::{
 
 use crate::{
     MessageCmsDb,
-    models::message::Message
+    models::message::Message,
+    security::sanitizers
 };
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct NewMessagePayload {
    pub from: String,
    pub name: String,
@@ -27,8 +29,31 @@ struct ValidError<'c> {
     code: u16
 }
 
+#[derive(Debug)]
+struct SanitizationErr<'c> {
+    message: &'c str,
+}
+
 
 impl<'c> NewMessagePayload {
+    fn sanitize(self) -> Result<Self, SanitizationErr<'c>> {
+        let message = sanitizers::message_sanitizing(self.message);
+        let subject = sanitizers::message_sanitizing(self.subject);
+        let name = sanitizers::message_sanitizing(self.name);
+
+        if UnicodeSegmentation::graphemes(message.as_str(), true).count() > 1000 {
+            return Err(SanitizationErr {
+                message: "Message is too long! You must limit your message to 1000 characters (UTF-8 Graphemes are considered)."
+            });
+        }
+
+        Ok(Self {
+            from: self.from,
+            name,
+            subject,
+            message
+        })
+    }
     fn is_valid(&self) -> Result<(), ValidError<'c>> {
         const EMAIL_RGX: &str = r"^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9]+(\.[a-zA-Z0-9-]{0,61})+$";
 
@@ -63,6 +88,20 @@ pub async fn send_message(cms_db: &State<MessageCmsDb>, message: Json<NewMessage
             HttpStatus::new(valid_err.code), 
             content::RawJson(json_response.to_string()))
     }
+
+    let clean_msg = message.sanitize();
+    if clean_msg.is_err() {
+        let sanitization_err = clean_msg.unwrap_err();
+        
+        let json_response = serde_json::json!({
+            "message": sanitization_err.message 
+        });
+    
+        return status::Custom(
+            HttpStatus::new(400), 
+            content::RawJson(json_response.to_string()))
+    }
+    let message = clean_msg.unwrap();
     
     let msg_doc = Message {
         id: None,
