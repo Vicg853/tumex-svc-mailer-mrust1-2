@@ -14,13 +14,14 @@ mod mongo;
 mod routes_mod;
 mod security;
 
+use rocket_cors::Cors;
 use auth::PublicKeys;
 use chrono::Duration;
 use guards::{rate_limiter, PerMinRateLimit};
 use mongo::MessageCmsDb;
 use rocket::fairing::AdHoc;
 use routes_mod::*;
-use security::{RateLimitState, RateType};
+use security::{RateLimitState, RateType, HeaderFairings};
 
 #[launch]
 async fn rocket() -> _ {
@@ -59,6 +60,8 @@ async fn rocket() -> _ {
             "Per minute rate limit handler",
             rate_limiter,
         ))
+        .attach(AdHoc::on_response("Response headers filter fairing", HeaderFairings::header_res_filter))
+        .attach(Cors::from_options(&HeaderFairings::rocket_cors_config()).expect("Failed to attach CORS"))
         .mount("/", routes![sd_msg_route])
         .mount("/health", routes![check_health_route])
         .mount(
