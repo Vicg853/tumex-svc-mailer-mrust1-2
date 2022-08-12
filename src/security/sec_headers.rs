@@ -41,7 +41,7 @@ impl HeaderFairings {
 
     pub fn rocket_cors_config() -> CorsOptions {
         CorsOptions {
-            allowed_origins: AllowedOrigins::some_regex(&[r"^(.*\.)*victorgomez.dev"]),
+            allowed_origins: AllowedOrigins::some(&["https://victorgomez.dev"], &[r"^https://(.*\.)*victorgomez.dev$"]),
             allowed_methods: vec![Method::from_str("GET").unwrap(), Method::from_str("POST").unwrap()].into_iter().map(From::from).collect(),
             allowed_headers: AllowedHeaders::some(&["Authorization", "Accept"]),
             ..Default::default()
