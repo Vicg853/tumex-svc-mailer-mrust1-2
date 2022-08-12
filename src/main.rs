@@ -13,6 +13,7 @@ mod models;
 mod mongo;
 mod routes_mod;
 mod security;
+mod error_catcher;
 
 use rocket_cors::Cors;
 use auth::PublicKeys;
@@ -75,4 +76,13 @@ async fn rocket() -> _ {
                 del_msg_no_id_route
             ],
         )
+        .register("/", catchers![
+            error_catcher::not_found,
+            error_catcher::internal_server_error,
+            error_catcher::bad_request,
+            error_catcher::unauthorized,
+            error_catcher::forbidden,
+            error_catcher::enhance_calm,
+            error_catcher::enhance_calm2
+        ])
 }
