@@ -19,6 +19,7 @@ tokio = { version = "1.20.0", features = ["tracing"] }
 console-subscriber = "0.1.6"
 ammonia = "3.2.0"
 unicode-segmentation = "1.9.0"
+rocket_cors = { git = "https://github.com/lawliet89/rocket_cors", branch = "master" }
 
 [profile.release]
 strip = true
