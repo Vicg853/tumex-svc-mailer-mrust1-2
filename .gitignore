@@ -9,3 +9,6 @@
 
 ## IDE specific
 .vscode
+
+### Cargo output files
+.cargo
