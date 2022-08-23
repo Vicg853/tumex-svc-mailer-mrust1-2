@@ -76,7 +76,6 @@ Project is created with:
   **Voilà, you should have access to the server via [``` localhost:8000 ```](http://localhost:8000)**
 
 ### **Credits**
-Contributors: [@vicg853](https://github.com/Vicg853)
 
 Special thanks to contributors/teams: 
 - at Rust org for the amazing lang and experience!
